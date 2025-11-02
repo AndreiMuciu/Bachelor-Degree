@@ -5,9 +5,13 @@ import {
   createUser,
   updateUser,
   deleteUser,
+  getMe,
 } from "./../controllers/userController.js";
+import { protect } from "./../controllers/authController.js";
 
 const router = express.Router();
+
+router.get("/me", protect, getMe);
 
 router.route("/").get(getAllUsers).post(createUser);
 

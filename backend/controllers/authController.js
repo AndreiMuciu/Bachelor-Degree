@@ -1,5 +1,6 @@
 import * as msal from "@azure/msal-node";
 import jwt from "jsonwebtoken";
+import { promisify } from "util";
 import User from "../models/userModel.js";
 
 const entraConfig = {
@@ -71,6 +72,9 @@ export const login = async (req, res, next) => {
       });
     }
 
+    // Populate settlements before sending response
+    await user.populate("settlements");
+
     createSendToken(user, 200, req, res);
   } catch (err) {
     res.status(400).json({
@@ -86,6 +90,9 @@ export const signup = async (req, res) => {
       email: req.body.email,
       password: req.body.password,
     });
+
+    // Populate settlements before sending response
+    await newUser.populate("settlements");
 
     createSendToken(newUser, 201, req, res);
   } catch (err) {
@@ -146,18 +153,22 @@ export const entraRedirect = async (req, res) => {
     const userEmail = response.account.username;
     const entraId = response.account.homeAccountId;
 
+    console.log("Microsoft login - User email:", userEmail);
+    console.log("Microsoft login - Entra ID:", entraId);
+
     // ⚠️ VERIFICARE CRITICĂ: userul TREBUIE să existe în DB
     let user = await User.findOne({ email: userEmail });
 
+    console.log("Microsoft login - User found in DB:", user ? "YES" : "NO");
+
     if (!user) {
+      console.log("Microsoft login - Redirecting with error: user_not_found");
       const frontendUrl =
         process.env.PRODUCTION === "false"
           ? "http://localhost:5173"
           : process.env.PRODUCTION_URL;
 
-      return res.redirect(
-        `${frontendUrl}?error=user_not_found&message=No account found. Contact admin.`
-      );
+      return res.redirect(`${frontendUrl}/login?error=user_not_found`);
     }
 
     // Update Entra ID info dacă nu există
@@ -167,24 +178,36 @@ export const entraRedirect = async (req, res) => {
       await user.save({ validateBeforeSave: false });
     }
 
-    // Creează JWT
+    // Creează JWT și setează cookie
     const token = signToken(user._id);
 
-    const cookieOptions = {
-      expires: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
-      httpOnly: true,
-      secure: process.env.PRODUCTION !== "false",
-      sameSite: "lax",
-    };
+    console.log(
+      "Microsoft login - Token created:",
+      token.substring(0, 20) + "..."
+    );
 
-    res.cookie("jwt", token, cookieOptions);
+    res.cookie("jwt", token, {
+      expires: new Date(
+        Date.now() +
+          Number(process.env.JWT_COOKIE_EXPIRES_IN) * 24 * 60 * 60 * 1000
+      ),
+      httpOnly: true,
+      secure: req.secure || req.headers["x-forwarded-proto"] === "https",
+    });
 
     const frontendUrl =
       process.env.PRODUCTION === "false"
         ? "http://localhost:5173"
         : process.env.PRODUCTION_URL;
 
-    res.redirect(`${frontendUrl}?login=success`);
+    console.log(
+      "Microsoft login - Redirecting to:",
+      `${frontendUrl}/login?login=success&token=${token.substring(0, 20)}...`
+    );
+
+    // Trimite token-ul în URL pentru ca frontend-ul să-l poată salva în localStorage
+    // Redirectează direct pe /login pentru a evita pierderea parametrilor
+    res.redirect(`${frontendUrl}/login?login=success&token=${token}`);
   } catch (err) {
     console.error("Entra redirect error:", err);
 
@@ -193,7 +216,7 @@ export const entraRedirect = async (req, res) => {
         ? "http://localhost:5173"
         : process.env.PRODUCTION_URL;
 
-    res.redirect(`${frontendUrl}?error=auth_failed`);
+    res.redirect(`${frontendUrl}/login?error=auth_failed`);
   }
 };
 
