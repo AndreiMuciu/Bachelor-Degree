@@ -27,9 +27,26 @@ export interface AuthResponse {
   };
 }
 
+export interface BlogPost {
+  _id: string;
+  title: string;
+  description: string;
+  content: string;
+  settlement: string;
+  date: Date;
+}
+
 export interface WebsiteComponent {
   id: string;
-  type: "header" | "hero" | "about" | "services" | "contact" | "footer";
+  type:
+    | "header"
+    | "hero"
+    | "about"
+    | "services"
+    | "contact"
+    | "footer"
+    | "blog"
+    | "map";
   content: {
     title?: string;
     subtitle?: string;

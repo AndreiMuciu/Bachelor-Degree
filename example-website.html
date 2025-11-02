@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="ro">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Primăria Timișoara - Exemplu</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+    <style>
+      /* Reset */
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+        line-height: 1.6;
+        color: #333;
+      }
+
+      /* Header */
+      .header {
+        background: #10b981;
+        color: white;
+        padding: 20px;
+        text-align: center;
+      }
+
+      .header h1 {
+        margin-bottom: 10px;
+      }
+
+      .header nav {
+        margin-top: 10px;
+      }
+
+      .header nav a {
+        color: white;
+        text-decoration: none;
+        margin: 0 10px;
+        padding: 5px 10px;
+        border-radius: 4px;
+        transition: background 0.3s;
+      }
+
+      .header nav a:hover {
+        background: #059669;
+      }
+
+      /* Hero Section */
+      .hero {
+        background: linear-gradient(135deg, #10b981 0%, #047857 100%);
+        color: white;
+        padding: 60px 20px;
+        text-align: center;
+      }
+
+      .hero h1 {
+        font-size: 48px;
+        margin-bottom: 16px;
+      }
+
+      .hero p {
+        font-size: 20px;
+        opacity: 0.9;
+      }
+
+      /* Sections */
+      .about,
+      .services,
+      .blog,
+      .map,
+      .contact {
+        padding: 60px 20px;
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      .about h2,
+      .services h2,
+      .blog h2,
+      .map h2,
+      .contact h2 {
+        font-size: 32px;
+        margin-bottom: 16px;
+        color: #10b981;
+        text-align: center;
+      }
+
+      .about p,
+      .services p,
+      .contact p {
+        font-size: 16px;
+        line-height: 1.8;
+        color: #666;
+        text-align: center;
+      }
+
+      /* Blog Section */
+      .blog-posts {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 24px;
+        margin-top: 32px;
+      }
+
+      .blog-post {
+        background: white;
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+      }
+
+      .blog-post:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+      }
+
+      .blog-post-date {
+        font-size: 14px;
+        color: #6b7280;
+        margin-bottom: 8px;
+      }
+
+      .blog-post h3 {
+        font-size: 20px;
+        margin-bottom: 8px;
+        color: #1f2937;
+      }
+
+      .blog-post-description {
+        font-size: 14px;
+        color: #4b5563;
+        margin-bottom: 12px;
+      }
+
+      .blog-post-content {
+        font-size: 15px;
+        line-height: 1.7;
+        color: #374151;
+      }
+
+      /* Map Section */
+      #map {
+        width: 100%;
+        height: 400px;
+        border-radius: 8px;
+        border: 2px solid #e5e7eb;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        margin-top: 20px;
+      }
+
+      /* Footer */
+      .footer {
+        background: #1a1a2e;
+        color: white;
+        padding: 20px;
+        margin-top: 40px;
+        text-align: center;
+      }
+
+      .footer p {
+        opacity: 0.8;
+      }
+
+      /* Loading */
+      .loading {
+        text-align: center;
+        color: #6b7280;
+        padding: 40px;
+      }
+
+      /* Responsive */
+      @media (max-width: 768px) {
+        .hero h1 {
+          font-size: 32px;
+        }
+
+        .about,
+        .services,
+        .blog,
+        .map,
+        .contact {
+          padding: 40px 20px;
+        }
+
+        .about h2,
+        .services h2,
+        .blog h2,
+        .map h2,
+        .contact h2 {
+          font-size: 24px;
+        }
+
+        .blog-posts {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="header">
+      <h1>Primăria Timișoara</h1>
+      <nav>
+        <a href="#hero">Acasă</a>
+        <a href="#about">Despre</a>
+        <a href="#blog">Noutăți</a>
+        <a href="#map">Localizare</a>
+        <a href="#contact">Contact</a>
+      </nav>
+    </header>
+
+    <section class="hero" id="hero">
+      <h1>Bine ați venit în Timișoara</h1>
+      <p>Portal oficial al orașului</p>
+    </section>
+
+    <section class="about" id="about">
+      <h2>Despre Timișoara</h2>
+      <p>
+        Timișoara este unul dintre cele mai importante centre culturale și
+        economice din România, cunoscut pentru arhitectura sa impresionantă și
+        spiritul european.
+      </p>
+    </section>
+
+    <section class="blog" id="blog">
+      <h2>Ultimele Noutăți</h2>
+      <div class="blog-posts" id="blog-posts-container">
+        <p class="loading">Se încarcă postările...</p>
+      </div>
+    </section>
+
+    <section class="map" id="map-section">
+      <h2>Localizare</h2>
+      <div id="map"></div>
+    </section>
+
+    <section class="contact" id="contact">
+      <h2>Contact</h2>
+      <p>
+        Pentru mai multe informații, ne puteți contacta la primaria@timisoara.ro
+      </p>
+    </section>
+
+    <footer class="footer">
+      <p>© 2025 Primăria Timișoara. Toate drepturile rezervate.</p>
+    </footer>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+      // Configuration
+      const API_URL = "http://localhost:5000/api/v1";
+      const SETTLEMENT_ID = "YOUR_SETTLEMENT_ID_HERE"; // Înlocuiește cu ID-ul real
+      const LOCATION = { lat: 45.7489, lng: 21.2087 }; // Coordonatele Timișoarei
+
+      // DOM Content Loaded
+      document.addEventListener("DOMContentLoaded", function () {
+        // Smooth scroll for navigation links
+        const navLinks = document.querySelectorAll('nav a[href^="#"]');
+
+        navLinks.forEach((link) => {
+          link.addEventListener("click", function (e) {
+            e.preventDefault();
+            const targetId = this.getAttribute("href").substring(1);
+            const targetElement = document.getElementById(targetId);
+
+            if (targetElement) {
+              targetElement.scrollIntoView({
+                behavior: "smooth",
+                block: "start",
+              });
+            }
+          });
+        });
+
+        // Add animation on scroll
+        const observerOptions = {
+          threshold: 0.1,
+          rootMargin: "0px 0px -50px 0px",
+        };
+
+        const observer = new IntersectionObserver(function (entries) {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              entry.target.style.opacity = "1";
+              entry.target.style.transform = "translateY(0)";
+            }
+          });
+        }, observerOptions);
+
+        // Observe all sections
+        const sections = document.querySelectorAll("section");
+        sections.forEach((section) => {
+          section.style.opacity = "0";
+          section.style.transform = "translateY(20px)";
+          section.style.transition = "opacity 0.6s ease, transform 0.6s ease";
+          observer.observe(section);
+        });
+
+        // Load blog posts
+        loadBlogPosts();
+
+        // Initialize map
+        initMap();
+
+        console.log("Website loaded successfully!");
+      });
+
+      // Fetch and display blog posts
+      async function loadBlogPosts() {
+        const container = document.getElementById("blog-posts-container");
+
+        try {
+          const response = await fetch(
+            `${API_URL}/blog-posts?settlement=${SETTLEMENT_ID}`
+          );
+          const data = await response.json();
+          const posts = data.data.data;
+
+          if (posts.length === 0) {
+            container.innerHTML =
+              '<p style="text-align: center; color: #6b7280;">Nu există postări încă.</p>';
+            return;
+          }
+
+          container.innerHTML = posts
+            .map(
+              (post) => `
+                    <div class="blog-post">
+                        <div class="blog-post-date">${new Date(
+                          post.date
+                        ).toLocaleDateString("ro-RO", {
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        })}</div>
+                        <h3>${post.title}</h3>
+                        <p class="blog-post-description">${post.description}</p>
+                        <div class="blog-post-content">${post.content}</div>
+                    </div>
+                `
+            )
+            .join("");
+        } catch (error) {
+          console.error("Error loading blog posts:", error);
+          container.innerHTML =
+            '<p style="text-align: center; color: #ef4444;">Eroare la încărcarea postărilor.</p>';
+        }
+      }
+
+      // Initialize Leaflet map
+      function initMap() {
+        const map = L.map("map").setView([LOCATION.lat, LOCATION.lng], 13);
+
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          attribution: "© OpenStreetMap contributors",
+          maxZoom: 19,
+        }).addTo(map);
+
+        L.marker([LOCATION.lat, LOCATION.lng])
+          .addTo(map)
+          .bindPopup("<b>Timișoara</b><br>Centrul orașului")
+          .openPopup();
+      }
+    </script>
+  </body>
+</html>

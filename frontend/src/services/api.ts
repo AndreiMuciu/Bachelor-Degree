@@ -4,6 +4,7 @@ import type {
   AuthResponse,
   User,
   Settlement,
+  BlogPost,
 } from "../types";
 
 const API_BASE_URL = "http://localhost:5000/api/v1";
@@ -86,6 +87,50 @@ export const settlementAPI = {
       data
     );
     return response.data.data.data;
+  },
+};
+
+// Blog Post endpoints
+export const blogPostAPI = {
+  getAll: async (): Promise<BlogPost[]> => {
+    const response = await api.get<{ data: { data: BlogPost[] } }>(
+      "/blog-posts"
+    );
+    return response.data.data.data;
+  },
+
+  getBySettlement: async (settlementId: string): Promise<BlogPost[]> => {
+    const response = await api.get<{ data: { data: BlogPost[] } }>(
+      `/blog-posts?settlement=${settlementId}`
+    );
+    return response.data.data.data;
+  },
+
+  getById: async (id: string): Promise<BlogPost> => {
+    const response = await api.get<{ data: { data: BlogPost } }>(
+      `/blog-posts/${id}`
+    );
+    return response.data.data.data;
+  },
+
+  create: async (data: Partial<BlogPost>): Promise<BlogPost> => {
+    const response = await api.post<{ data: { data: BlogPost } }>(
+      "/blog-posts",
+      data
+    );
+    return response.data.data.data;
+  },
+
+  update: async (id: string, data: Partial<BlogPost>): Promise<BlogPost> => {
+    const response = await api.patch<{ data: { data: BlogPost } }>(
+      `/blog-posts/${id}`,
+      data
+    );
+    return response.data.data.data;
+  },
+
+  delete: async (id: string): Promise<void> => {
+    await api.delete(`/blog-posts/${id}`);
   },
 };
 

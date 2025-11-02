@@ -5,14 +5,13 @@ import { authAPI } from "../services/api";
 import "../styles/Login.css";
 
 const LoginPage: React.FC = () => {
-  const [isLoginMode, setIsLoginMode] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [searchParams] = useSearchParams();
 
-  const { login, signup } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
 
   // Verifică dacă există parametri de la Microsoft login
@@ -58,11 +57,7 @@ const LoginPage: React.FC = () => {
     setLoading(true);
 
     try {
-      if (isLoginMode) {
-        await login({ email, password });
-      } else {
-        await signup({ email, password });
-      }
+      await login({ email, password });
       navigate("/");
     } catch (err: any) {
       setError(
@@ -82,19 +77,26 @@ const LoginPage: React.FC = () => {
     <div className="login-container">
       <div className="login-box">
         <div className="login-header">
-          <h1>{isLoginMode ? "Autentificare" : "Înregistrare"}</h1>
-          <p>
-            {isLoginMode
-              ? "Bine ai revenit! Te rugăm să te autentifici."
-              : "Creează un cont nou pentru a începe."}
-          </p>
+          <div className="logo-container">
+            <div className="logo-icon">🏛️</div>
+          </div>
+          <h1>Bine ai revenit!</h1>
+          <p>Autentifică-te pentru a accesa dashboard-ul</p>
         </div>
 
         <form className="login-form" onSubmit={handleSubmit}>
-          {error && <div className="error-message">{error}</div>}
+          {error && (
+            <div className="error-message">
+              <span className="error-icon">⚠️</span>
+              {error}
+            </div>
+          )}
 
           <div className="form-group">
-            <label htmlFor="email">Email</label>
+            <label htmlFor="email">
+              <span className="label-icon">📧</span>
+              Email
+            </label>
             <input
               type="email"
               id="email"
@@ -106,28 +108,39 @@ const LoginPage: React.FC = () => {
           </div>
 
           <div className="form-group">
-            <label htmlFor="password">Parolă</label>
+            <label htmlFor="password">
+              <span className="label-icon">🔒</span>
+              Parolă
+            </label>
             <input
               type="password"
               id="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
+              placeholder="Minim 6 caractere"
               required
               minLength={6}
             />
           </div>
 
           <button type="submit" className="btn-primary" disabled={loading}>
-            {loading
-              ? "Se procesează..."
-              : isLoginMode
-              ? "Autentifică-te"
-              : "Înregistrează-te"}
+            {loading ? (
+              <>
+                <span className="spinner-small"></span>
+                Se procesează...
+              </>
+            ) : (
+              <>
+                <span className="btn-icon">🚀</span>
+                Autentifică-te
+              </>
+            )}
           </button>
         </form>
 
-        <div className="divider">sau</div>
+        <div className="divider">
+          <span>sau</span>
+        </div>
 
         <button
           type="button"
@@ -143,22 +156,11 @@ const LoginPage: React.FC = () => {
           Continuă cu Microsoft
         </button>
 
-        <div className="toggle-mode">
-          {isLoginMode ? (
-            <>
-              Nu ai cont?{" "}
-              <button type="button" onClick={() => setIsLoginMode(false)}>
-                Înregistrează-te
-              </button>
-            </>
-          ) : (
-            <>
-              Ai deja cont?{" "}
-              <button type="button" onClick={() => setIsLoginMode(true)}>
-                Autentifică-te
-              </button>
-            </>
-          )}
+        <div className="login-footer">
+          <p>
+            Conturile sunt gestionate de administrator. Dacă ai nevoie de acces,
+            contactează echipa de suport.
+          </p>
         </div>
       </div>
     </div>

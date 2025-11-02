@@ -31,6 +31,33 @@ const Header: React.FC = () => {
             <span className="nav-icon">🏠</span>
             Acasă
           </Link>
+          <Link
+            to="/about"
+            className={`nav-link ${
+              location.pathname === "/about" ? "active" : ""
+            }`}
+          >
+            <span className="nav-icon">ℹ️</span>
+            Despre
+          </Link>
+          <Link
+            to="/help"
+            className={`nav-link ${
+              location.pathname === "/help" ? "active" : ""
+            }`}
+          >
+            <span className="nav-icon">❓</span>
+            Ajutor
+          </Link>
+          <Link
+            to="/faq"
+            className={`nav-link ${
+              location.pathname === "/faq" ? "active" : ""
+            }`}
+          >
+            <span className="nav-icon">❔</span>
+            FAQ
+          </Link>
           {user?.role === "admin" && (
             <Link
               to="/admin"

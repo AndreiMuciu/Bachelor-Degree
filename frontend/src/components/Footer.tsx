@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import "../styles/Footer.css";
 
@@ -26,13 +27,13 @@ const Footer: React.FC = () => {
           <h4 className="footer-heading">Link-uri Rapide</h4>
           <ul className="footer-links">
             <li>
-              <a href="/">Acasă</a>
+              <Link to="/">Acasă</Link>
             </li>
             <li>
-              <a href="/about">Despre</a>
+              <Link to="/about">Despre</Link>
             </li>
             <li>
-              <a href="/help">Ajutor</a>
+              <Link to="/help">Ajutor</Link>
             </li>
           </ul>
         </div>
@@ -41,7 +42,7 @@ const Footer: React.FC = () => {
           <h4 className="footer-heading">Suport</h4>
           <ul className="footer-links">
             <li>
-              <a href="/faq">Întrebări Frecvente</a>
+              <Link to="/faq">Întrebări Frecvente</Link>
             </li>
             <li>
               <a href="/terms">Termeni și Condiții</a>

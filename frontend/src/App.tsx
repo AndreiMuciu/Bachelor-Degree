@@ -10,6 +10,10 @@ import Layout from "./components/Layout";
 import LoginPage from "./pages/LoginPage";
 import Dashboard from "./pages/Dashboard";
 import SettlementPage from "./pages/SettlementPage";
+import AboutPage from "./pages/AboutPage";
+import HelpPage from "./pages/HelpPage";
+import FAQPage from "./pages/FAQPage";
+import BlogManagementPage from "./pages/BlogManagementPage";
 import "./App.css";
 
 function AppRoutes() {
@@ -52,6 +56,46 @@ function AppRoutes() {
           <ProtectedRoute>
             <Layout>
               <SettlementPage />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/settlement/:settlementId/blog"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <BlogManagementPage />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/about"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <AboutPage />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/help"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <HelpPage />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/faq"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <FAQPage />
             </Layout>
           </ProtectedRoute>
         }

@@ -145,6 +145,17 @@
 }
 
 /* Responsive */
+@media (max-width: 1024px) {
+  .nav-link {
+    padding: 8px 12px;
+    font-size: 14px;
+  }
+
+  .nav-icon {
+    font-size: 16px;
+  }
+}
+
 @media (max-width: 768px) {
   .header-container {
     flex-direction: column;
@@ -155,6 +166,12 @@
   .header-nav {
     width: 100%;
     justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .nav-link {
+    padding: 8px 12px;
+    font-size: 13px;
   }
 
   .header-user {
