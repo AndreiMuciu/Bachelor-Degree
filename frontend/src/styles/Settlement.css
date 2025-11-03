@@ -227,6 +227,85 @@
   border-color: #10b981;
 }
 
+/* Component Edit Form */
+.component-edit-form {
+  background: white;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 12px 0;
+  border: 1px solid #e0e0e0;
+}
+
+.component-edit-form .form-group {
+  margin-bottom: 16px;
+}
+
+.component-edit-form label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 6px;
+}
+
+.component-edit-form input,
+.component-edit-form textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color 0.3s;
+}
+
+.component-edit-form input:focus,
+.component-edit-form textarea:focus {
+  outline: none;
+  border-color: #10b981;
+}
+
+.component-edit-form textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.edit-form-buttons {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.edit-form-buttons .btn-save,
+.edit-form-buttons .btn-cancel {
+  flex: 1;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.edit-form-buttons .btn-save {
+  background: #10b981;
+  color: white;
+}
+
+.edit-form-buttons .btn-save:hover {
+  background: #059669;
+}
+
+.edit-form-buttons .btn-cancel {
+  background: #f3f4f6;
+  color: #666;
+}
+
+.edit-form-buttons .btn-cancel:hover {
+  background: #e5e7eb;
+}
+
 .add-component {
   margin-top: 16px;
 }
@@ -773,59 +852,21 @@ textarea:focus {
 .leaflet-container {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, sans-serif;
-  border-radius: 12px;
 }
 
 .leaflet-popup-content-wrapper {
-  border-radius: 16px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
-  border: 3px solid #10b981;
-  padding: 0;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .leaflet-popup-content {
-  margin: 0;
+  margin: 12px 16px;
   font-size: 14px;
   line-height: 1.6;
 }
 
 .leaflet-popup-tip {
   box-shadow: 0 3px 14px rgba(0, 0, 0, 0.15);
-  background: white;
-}
-
-/* Zoom control styling */
-.leaflet-control-zoom {
-  border: none !important;
-  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3) !important;
-}
-
-.leaflet-control-zoom a {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
-  color: white !important;
-  border: none !important;
-  width: 40px !important;
-  height: 40px !important;
-  line-height: 40px !important;
-  font-size: 22px !important;
-  font-weight: bold !important;
-  border-radius: 10px !important;
-  transition: all 0.3s ease !important;
-}
-
-.leaflet-control-zoom a:hover {
-  background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
-  transform: scale(1.1) !important;
-  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5) !important;
-}
-
-.leaflet-control-zoom-in {
-  margin-bottom: 8px !important;
-  border-radius: 10px 10px 4px 4px !important;
-}
-
-.leaflet-control-zoom-out {
-  border-radius: 4px 4px 10px 10px !important;
 }
 
 /* Map Preview Enhancement */

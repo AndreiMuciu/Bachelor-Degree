@@ -134,4 +134,29 @@ export const blogPostAPI = {
   },
 };
 
+// N8N endpoints
+export const n8nAPI = {
+  createSite: async (
+    settlementId: string,
+    files: { html: string; css: string; js: string }
+  ): Promise<{ status: string; message: string; data: any }> => {
+    const response = await api.post("/n8n/create-site", {
+      settlementId,
+      files,
+    });
+    return response.data;
+  },
+
+  updateSite: async (
+    settlementId: string,
+    files: { html: string; css: string; js: string }
+  ): Promise<{ status: string; message: string; data: any }> => {
+    const response = await api.post("/n8n/update-site", {
+      settlementId,
+      files,
+    });
+    return response.data;
+  },
+};
+
 export default api;

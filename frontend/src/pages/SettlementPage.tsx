@@ -3,7 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-import { settlementAPI, blogPostAPI } from "../services/api";
+import { settlementAPI, blogPostAPI, n8nAPI } from "../services/api";
 import type { Settlement, WebsiteComponent, BlogPost } from "../types";
 import "../styles/Settlement.css";
 
@@ -83,6 +83,9 @@ const SettlementPage: React.FC = () => {
   });
   const [showStyleEditor, setShowStyleEditor] = useState(false);
   const [customCSS, setCustomCSS] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [editingComponent, setEditingComponent] = useState<string | null>(null);
+  const [editFormData, setEditFormData] = useState<any>({});
 
   useEffect(() => {
     const fetchSettlement = async () => {
@@ -215,14 +218,98 @@ const SettlementPage: React.FC = () => {
     );
   };
 
+  const handleEditComponent = (id: string) => {
+    const component = components.find((c) => c.id === id);
+    if (component) {
+      setEditingComponent(id);
+      setEditFormData({ ...component.content });
+    }
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingComponent) return;
+
+    setComponents(
+      components.map((c) =>
+        c.id === editingComponent ? { ...c, content: { ...editFormData } } : c
+      )
+    );
+    setEditingComponent(null);
+    setEditFormData({});
+  };
+
+  const handleCancelEdit = () => {
+    setEditingComponent(null);
+    setEditFormData({});
+  };
+
+  // Save site to n8n
+  const handleSaveSite = async () => {
+    if (!settlement || !id) {
+      alert("Settlement not loaded!");
+      return;
+    }
+
+    if (components.length === 0) {
+      alert("Adaugă cel puțin o componentă înainte de a salva!");
+      return;
+    }
+
+    setIsSaving(true);
+
+    try {
+      // Check if there's a blog component
+      const hasBlog = components.some((c) => c.type === "blog");
+
+      // Generate code files
+      const files = {
+        html: generateHTML(),
+        css: generateCSS(),
+        js: generateJS(),
+        ...(hasBlog && blogPosts.length > 0
+          ? { blogHtml: generateBlogPage() }
+          : {}),
+      };
+
+      // Check if site is already active
+      if (settlement.active) {
+        // Update existing site
+        const response = await n8nAPI.updateSite(id, files);
+        alert("Site actualizat cu succes! ✅");
+        console.log("Site updated:", response);
+      } else {
+        // Create new site
+        const response = await n8nAPI.createSite(id, files);
+        alert("Site creat cu succes! ✅");
+        console.log("Site created:", response);
+
+        // Update local settlement state to reflect active status
+        setSettlement({ ...settlement, active: true });
+      }
+    } catch (error: any) {
+      console.error("Error saving site:", error);
+      const errorMessage =
+        error.response?.data?.message || error.message || "Eroare necunoscută";
+      alert(`Eroare la salvarea site-ului: ${errorMessage}`);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   // Generate HTML code
   const generateHTML = () => {
     const htmlContent = components
       .map((comp) => {
         switch (comp.type) {
           case "header":
+            // Default header title with settlement name
+            const headerTitle =
+              comp.content.title || `Primăria ${settlement?.name || ""}`;
+            const headerSubtitle = "Pagina Oficială";
+
             return `    <header class="header ${comp.alignment}">
-      <h1>${comp.content.title || "Header"}</h1>
+      <h1>${headerTitle}</h1>
+      <p class="header-subtitle">${headerSubtitle}</p>
       ${
         comp.content.links
           ? `<nav>
@@ -234,37 +321,114 @@ const SettlementPage: React.FC = () => {
       }
     </header>`;
           case "hero":
+            const heroTitle =
+              comp.content.title !== undefined
+                ? comp.content.title
+                : "Bine ați venit";
+            const heroSubtitle =
+              comp.content.subtitle !== undefined
+                ? comp.content.subtitle
+                : `la ${settlement?.name || ""}`;
             return `    <section class="hero ${comp.alignment}">
-      <h1>${comp.content.title || "Hero Title"}</h1>
-      <p>${comp.content.subtitle || "Subtitle"}</p>
+      ${heroTitle ? `<h1>${heroTitle}</h1>` : ""}
+      ${heroSubtitle ? `<p>${heroSubtitle}</p>` : ""}
     </section>`;
           case "about":
+            const aboutTitle =
+              comp.content.title !== undefined ? comp.content.title : "Despre";
             return `    <section class="about ${comp.alignment}">
-      <h2>${comp.content.title || "Despre"}</h2>
+      ${aboutTitle ? `<h2>${aboutTitle}</h2>` : ""}
       <p>${comp.content.description || "Descriere..."}</p>
     </section>`;
           case "services":
+            const servicesTitle =
+              comp.content.title !== undefined
+                ? comp.content.title
+                : "Servicii";
             return `    <section class="services ${comp.alignment}">
-      <h2>${comp.content.title || "Servicii"}</h2>
+      ${servicesTitle ? `<h2>${servicesTitle}</h2>` : ""}
       <p>${comp.content.description || "Lista serviciilor..."}</p>
     </section>`;
           case "blog":
+            const displayedPosts = blogPosts.slice(0, 5);
+            const remainingCount = blogPosts.length - 5;
+
+            // Helper to escape HTML and truncate text
+            const escapeHtml = (text: string): string => {
+              const div = document.createElement("div");
+              div.textContent = text;
+              return div.innerHTML;
+            };
+
+            const truncateText = (text: string, maxLength: number): string => {
+              const stripped = text.replace(/<[^>]*>/g, ""); // Remove HTML tags
+              return stripped.length > maxLength
+                ? escapeHtml(stripped.substring(0, maxLength)) + "..."
+                : escapeHtml(stripped);
+            };
+
+            const blogHTML =
+              blogPosts.length > 0
+                ? `
+${displayedPosts
+  .map(
+    (post) => `        <div class="blog-post">
+          <div class="blog-post-date">${new Date(post.date).toLocaleDateString(
+            "ro-RO",
+            {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            }
+          )}</div>
+          <h3>${escapeHtml(post.title)}</h3>
+          <p class="blog-post-description">${escapeHtml(post.description)}</p>
+          <div class="blog-post-content">${truncateText(
+            post.content,
+            150
+          )}</div>
+        </div>`
+  )
+  .join("\n")}
+${
+  remainingCount > 0
+    ? `        <div class="blog-more">
+          <p>... și încă ${remainingCount} ${
+        remainingCount === 1 ? "postare" : "postări"
+      }</p>
+          <a href="blog.html" class="btn-view-all">Vezi toate postările</a>
+        </div>`
+    : ""
+}`
+                : '<p style="text-align: center; color: #6b7280;">Nu există postări încă.</p>';
+
+            const blogTitle =
+              comp.content.title !== undefined
+                ? comp.content.title
+                : "Ultimele Noutăți";
+
             return `    <section class="blog ${
               comp.alignment
             }" id="blog-section">
-      <h2>${comp.content.title || "Ultimele Noutăți"}</h2>
+      ${blogTitle ? `<h2>${blogTitle}</h2>` : ""}
       <div class="blog-posts" id="blog-posts-container">
-        <p class="loading">Se încarcă postările...</p>
+${blogHTML}
       </div>
     </section>`;
           case "map":
+            const mapTitle =
+              comp.content.title !== undefined
+                ? comp.content.title
+                : "Localizare";
             return `    <section class="map ${comp.alignment}">
-      <h2>${comp.content.title || "Localizare"}</h2>
+      ${mapTitle ? `<h2>${mapTitle}</h2>` : ""}
       <div id="map" style="width: 100%; height: 400px; border-radius: 8px;"></div>
     </section>`;
           case "contact":
+            const contactTitle =
+              comp.content.title !== undefined ? comp.content.title : "Contact";
             return `    <section class="contact ${comp.alignment}">
-      <h2>${comp.content.title || "Contact"}</h2>
+      ${contactTitle ? `<h2>${contactTitle}</h2>` : ""}
       <p>${comp.content.description || "Informații contact..."}</p>
     </section>`;
           case "footer":
@@ -294,6 +458,93 @@ ${htmlContent}
 </html>`;
   };
 
+  // Generate Blog Page HTML
+  const generateBlogPage = () => {
+    // Helper to escape HTML
+    const escapeHtml = (text: string): string => {
+      const div = document.createElement("div");
+      div.textContent = text;
+      return div.innerHTML;
+    };
+
+    const allBlogPosts = blogPosts
+      .map(
+        (post) => `        <div class="blog-post">
+          <div class="blog-post-date">${new Date(post.date).toLocaleDateString(
+            "ro-RO",
+            {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            }
+          )}</div>
+          <h3>${escapeHtml(post.title)}</h3>
+          <p class="blog-post-description">${escapeHtml(post.description)}</p>
+          <div class="blog-post-content">${post.content}</div>
+        </div>`
+      )
+      .join("\n");
+
+    return `<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blog - ${settlement?.name || "Website"}</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+      /* Additional blog page specific styles */
+      body {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+      }
+      
+      .blog-page {
+        flex: 1 0 auto;
+      }
+      
+      .blog-posts .blog-post {
+        height: auto;
+      }
+      
+      .blog-posts .blog-post .blog-post-content {
+        -webkit-line-clamp: unset !important;
+        display: block !important;
+        max-height: none !important;
+      }
+    </style>
+</head>
+<body>
+    <header class="header center">
+      <h1>Blog - ${settlement?.name || "Website"}</h1>
+      <nav>
+        <a href="index.html">Acasă</a>
+      </nav>
+    </header>
+
+    <section class="blog-page">
+      <div class="blog-search-container">
+        <input type="text" id="blog-search" class="blog-search" placeholder="Caută în postări...">
+      </div>
+      
+      <div class="blog-posts" id="all-blog-posts">
+${
+  allBlogPosts ||
+  '<p style="text-align: center; color: #6b7280;">Nu există postări încă.</p>'
+}
+      </div>
+    </section>
+
+    <footer class="footer center">
+      <p>© 2025 ${settlement?.name}. Toate drepturile rezervate.</p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>`;
+  };
+
   // Generate CSS code
   const generateCSS = () => {
     const baseCSS = `/* Reset */
@@ -303,10 +554,22 @@ ${htmlContent}
     box-sizing: border-box;
 }
 
+html {
+    height: 100%;
+}
+
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     line-height: 1.6;
     color: #333;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Main content wrapper */
+.hero, .about, .services, .contact, .blog, .map {
+    flex: 1 0 auto;
 }
 
 /* Alignment classes */
@@ -327,14 +590,27 @@ body {
     background: #10b981;
     color: white;
     padding: 20px;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    flex-shrink: 0;
 }
 
 .header h1 {
-    margin-bottom: 10px;
+    margin-bottom: 5px;
+    font-size: 28px;
+}
+
+.header-subtitle {
+    margin: 0 0 10px 0;
+    font-size: 14px;
+    opacity: 0.9;
+    font-style: italic;
 }
 
 .header nav {
-    margin-top: 10px;
+    margin-top: 15px;
 }
 
 .header nav a {
@@ -400,6 +676,9 @@ body {
     padding: 24px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
+    overflow: hidden !important;
+    word-wrap: break-word;
+    max-width: 100%;
 }
 
 .blog-post:hover {
@@ -417,24 +696,120 @@ body {
     font-size: 20px;
     margin-bottom: 8px;
     color: #1f2937;
+    overflow: hidden !important;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    word-break: break-word;
+    line-height: 1.4;
+    max-width: 100%;
 }
 
 .blog-post-description {
     font-size: 14px;
     color: #4b5563;
     margin-bottom: 12px;
+    overflow: hidden !important;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    word-break: break-word;
+    line-height: 1.5;
+    max-width: 100%;
 }
 
 .blog-post-content {
     font-size: 15px;
-    line-height: 1.7;
+    line-height: 1.6;
     color: #374151;
+    overflow: hidden !important;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    word-break: break-word;
+    max-width: 100%;
+}
+
+.blog-more {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    border-radius: 12px;
+    padding: 32px 24px;
+    text-align: center;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+}
+
+.blog-more p {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0;
+}
+
+.btn-view-all {
+    display: inline-block;
+    padding: 12px 32px;
+    background: white;
+    color: #10b981;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.btn-view-all:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Blog Page Styles */
+.blog-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px 20px;
+    flex: 1 0 auto;
+    min-height: calc(100vh - 200px);
+}
+
+.blog-search-container {
+    margin-bottom: 32px;
+}
+
+.blog-search {
+    width: 100%;
+    max-width: 600px;
+    padding: 16px 24px;
+    font-size: 16px;
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    transition: border-color 0.3s ease;
+}
+
+.blog-search:focus {
+    outline: none;
+    border-color: #10b981;
 }
 
 /* Map Section */
 #map {
+    width: 100%;
+    height: 400px;
     border: 2px solid #e5e7eb;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    background: #f9fafb;
+    position: relative;
+    z-index: 1;
+}
+
+.map {
+    min-height: 500px;
 }
 
 /* Footer */
@@ -442,11 +817,14 @@ body {
     background: #1a1a2e;
     color: white;
     padding: 20px;
-    margin-top: 40px;
+    margin-top: auto;
+    flex-shrink: 0;
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .footer p {
     opacity: 0.8;
+    margin: 0;
 }
 
 /* Responsive */
@@ -528,8 +906,11 @@ document.addEventListener('DOMContentLoaded', function() {
     ${
       hasBlog
         ? `
-    // Load blog posts
-    loadBlogPosts();`
+    // Load blog posts (only if not already in HTML)
+    const blogContainer = document.getElementById('blog-posts-container');
+    if (blogContainer && blogContainer.querySelector('.loading')) {
+        loadBlogPosts();
+    }`
         : ""
     }
     ${
@@ -575,6 +956,27 @@ async function loadBlogPosts() {
         console.error('Error loading blog posts:', error);
         container.innerHTML = '<p style="text-align: center; color: #ef4444;">Eroare la încărcarea postărilor.</p>';
     }
+}
+
+// Blog search functionality
+const blogSearch = document.getElementById('blog-search');
+if (blogSearch) {
+    blogSearch.addEventListener('input', function(e) {
+        const searchTerm = e.target.value.toLowerCase();
+        const blogPosts = document.querySelectorAll('#all-blog-posts .blog-post');
+        
+        blogPosts.forEach(post => {
+            const title = post.querySelector('h3').textContent.toLowerCase();
+            const description = post.querySelector('.blog-post-description').textContent.toLowerCase();
+            const content = post.querySelector('.blog-post-content').textContent.toLowerCase();
+            
+            if (title.includes(searchTerm) || description.includes(searchTerm) || content.includes(searchTerm)) {
+                post.style.display = 'block';
+            } else {
+                post.style.display = 'none';
+            }
+        });
+    });
 }`
     : ""
 }
@@ -582,18 +984,56 @@ ${
   hasMap
     ? `
 // Initialize Leaflet map
+let mapInitAttempts = 0;
+const MAX_MAP_ATTEMPTS = 50; // 5 seconds max
+
 function initMap() {
-    const map = L.map('map').setView([LOCATION.lat, LOCATION.lng], 13);
+    mapInitAttempts++;
     
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors',
-        maxZoom: 19
-    }).addTo(map);
+    // Wait for Leaflet to load
+    if (typeof L === 'undefined') {
+        if (mapInitAttempts < MAX_MAP_ATTEMPTS) {
+            console.log('Leaflet not loaded yet, waiting... (attempt ' + mapInitAttempts + ')');
+            setTimeout(initMap, 100);
+        } else {
+            console.error('Failed to load Leaflet library after ' + MAX_MAP_ATTEMPTS + ' attempts');
+            const mapElement = document.getElementById('map');
+            if (mapElement) {
+                mapElement.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #666;"><p>Harta nu poate fi încărcată momentan.</p></div>';
+            }
+        }
+        return;
+    }
     
-    L.marker([LOCATION.lat, LOCATION.lng])
-        .addTo(map)
-        .bindPopup('<b>${settlement?.name || "Localitatea"}</b>')
-        .openPopup();
+    const mapElement = document.getElementById('map');
+    if (!mapElement) {
+        console.error('Map element not found');
+        return;
+    }
+    
+    try {
+        const map = L.map('map').setView([LOCATION.lat, LOCATION.lng], 13);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 19
+        }).addTo(map);
+        
+        L.marker([LOCATION.lat, LOCATION.lng])
+            .addTo(map)
+            .bindPopup('<b>${settlement?.name || "Localitatea"}</b>')
+            .openPopup();
+            
+        console.log('Map initialized successfully');
+        
+        // Force map to resize after a short delay
+        setTimeout(() => {
+            map.invalidateSize();
+        }, 250);
+    } catch (error) {
+        console.error('Error initializing map:', error);
+        mapElement.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #ef4444;"><p>Eroare la inițializarea hărții.</p></div>';
+    }
 }`
     : ""
 }`;
@@ -803,42 +1243,19 @@ function initMap() {
               {settlement ? (
                 <MapContainer
                   center={[settlement.lat, settlement.lng]}
-                  zoom={12}
+                  zoom={11}
                   style={{ height: "100%", width: "100%" }}
-                  scrollWheelZoom={true}
-                  zoomControl={true}
+                  scrollWheelZoom={false}
                 >
                   <TileLayer
-                    attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-                    url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-                    subdomains="abcd"
-                    maxZoom={20}
+                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                   />
                   <Marker position={[settlement.lat, settlement.lng]}>
                     <Popup>
-                      <div style={{ 
-                        padding: '10px',
-                        minWidth: '200px',
-                        textAlign: 'center'
-                      }}>
-                        <div style={{
-                          fontSize: '18px',
-                          fontWeight: 'bold',
-                          color: '#1f2937',
-                          marginBottom: '8px'
-                        }}>
-                          📍 {settlement.name}
-                        </div>
-                        <div style={{
-                          fontSize: '14px',
-                          color: '#6b7280',
-                          borderTop: '2px solid #10b981',
-                          paddingTop: '8px',
-                          marginTop: '8px'
-                        }}>
-                          {settlement.judet}
-                        </div>
-                      </div>
+                      <strong>{settlement.name}</strong>
+                      <br />
+                      {settlement.judet}
                     </Popup>
                   </Marker>
                 </MapContainer>
@@ -931,7 +1348,17 @@ function initMap() {
                 <button className="btn-save" onClick={handleViewCode}>
                   👁️ Vezi Cod
                 </button>
-                <button className="btn-save">Salvează</button>
+                <button
+                  className="btn-save"
+                  onClick={handleSaveSite}
+                  disabled={isSaving}
+                >
+                  {isSaving
+                    ? "Se salvează..."
+                    : settlement?.active
+                    ? "💾 Actualizează Site"
+                    : "💾 Salvează Site"}
+                </button>
               </>
             )}
           </div>
@@ -1012,6 +1439,13 @@ function initMap() {
                         }
                       </span>
                       <div className="component-controls">
+                        <button
+                          className="btn-icon"
+                          onClick={() => handleEditComponent(component.id)}
+                          title="Editează"
+                        >
+                          ✏️
+                        </button>
                         {index > 0 && (
                           <button
                             className="btn-icon"
@@ -1043,6 +1477,75 @@ function initMap() {
                         </button>
                       </div>
                     </div>
+
+                    {/* Edit Form */}
+                    {editingComponent === component.id && (
+                      <div className="component-edit-form">
+                        <div className="form-group">
+                          <label>Titlu:</label>
+                          <input
+                            type="text"
+                            value={editFormData.title || ""}
+                            onChange={(e) =>
+                              setEditFormData({
+                                ...editFormData,
+                                title: e.target.value,
+                              })
+                            }
+                            placeholder="Lasă gol pentru titlu implicit"
+                          />
+                        </div>
+
+                        {component.type === "hero" && (
+                          <div className="form-group">
+                            <label>Subtitle:</label>
+                            <input
+                              type="text"
+                              value={editFormData.subtitle || ""}
+                              onChange={(e) =>
+                                setEditFormData({
+                                  ...editFormData,
+                                  subtitle: e.target.value,
+                                })
+                              }
+                              placeholder="Subtitle"
+                            />
+                          </div>
+                        )}
+
+                        {(component.type === "about" ||
+                          component.type === "services" ||
+                          component.type === "contact") && (
+                          <div className="form-group">
+                            <label>Descriere:</label>
+                            <textarea
+                              value={editFormData.description || ""}
+                              onChange={(e) =>
+                                setEditFormData({
+                                  ...editFormData,
+                                  description: e.target.value,
+                                })
+                              }
+                              placeholder="Descriere"
+                              rows={4}
+                            />
+                          </div>
+                        )}
+
+                        <div className="edit-form-buttons">
+                          <button className="btn-save" onClick={handleSaveEdit}>
+                            💾 Salvează
+                          </button>
+                          <button
+                            className="btn-cancel"
+                            onClick={handleCancelEdit}
+                          >
+                            ✖️ Anulează
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
                     <div className="component-alignment">
                       <button
                         className={`btn-alignment ${

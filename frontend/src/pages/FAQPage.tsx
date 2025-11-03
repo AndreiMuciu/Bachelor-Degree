@@ -1,18 +1,14 @@
 import React, { useState } from "react";
+import CategoryFilter from "../components/faq/CategoryFilter";
+import FAQList from "../components/faq/FAQList";
+import type { FAQItemData } from "../components/faq/FAQList";
 import "../styles/FAQ.css";
-
-interface FAQItem {
-  id: number;
-  question: string;
-  answer: string;
-  category: string;
-}
 
 const FAQPage: React.FC = () => {
   const [activeId, setActiveId] = useState<number | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>("all");
 
-  const faqs: FAQItem[] = [
+  const faqs: FAQItemData[] = [
     {
       id: 1,
       question: "Ce este Portal Localități?",
@@ -156,13 +152,13 @@ const FAQPage: React.FC = () => {
   ];
 
   const categories = [
-    { id: "all", name: "Toate", icon: "📋" },
-    { id: "general", name: "General", icon: "ℹ️" },
-    { id: "account", name: "Cont", icon: "👤" },
-    { id: "content", name: "Conținut", icon: "✏️" },
-    { id: "design", name: "Design", icon: "🎨" },
-    { id: "settings", name: "Setări", icon: "⚙️" },
-    { id: "security", name: "Securitate", icon: "🔒" },
+    { id: "all", label: "Toate", icon: "📋" },
+    { id: "general", label: "General", icon: "ℹ️" },
+    { id: "account", label: "Cont", icon: "👤" },
+    { id: "content", label: "Conținut", icon: "✏️" },
+    { id: "design", label: "Design", icon: "🎨" },
+    { id: "settings", label: "Setări", icon: "⚙️" },
+    { id: "security", label: "Securitate", icon: "🔒" },
   ];
 
   const filteredFAQs =
@@ -181,41 +177,13 @@ const FAQPage: React.FC = () => {
         <p>Găsește răspunsuri rapide la întrebările tale</p>
       </div>
 
-      <div className="faq-categories">
-        {categories.map((category) => (
-          <button
-            key={category.id}
-            className={`category-btn ${
-              activeCategory === category.id ? "active" : ""
-            }`}
-            onClick={() => setActiveCategory(category.id)}
-          >
-            <span className="category-icon">{category.icon}</span>
-            {category.name}
-          </button>
-        ))}
-      </div>
+      <CategoryFilter
+        categories={categories}
+        activeCategory={activeCategory}
+        onCategoryChange={setActiveCategory}
+      />
 
-      <div className="faq-list">
-        {filteredFAQs.map((faq) => (
-          <div
-            key={faq.id}
-            className={`faq-item ${activeId === faq.id ? "active" : ""}`}
-          >
-            <button className="faq-question" onClick={() => toggleFAQ(faq.id)}>
-              <span className="question-text">{faq.question}</span>
-              <span className="toggle-icon">
-                {activeId === faq.id ? "−" : "+"}
-              </span>
-            </button>
-            {activeId === faq.id && (
-              <div className="faq-answer">
-                <p>{faq.answer}</p>
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
+      <FAQList faqs={filteredFAQs} activeId={activeId} onToggle={toggleFAQ} />
 
       <div className="faq-footer">
         <div className="contact-box">

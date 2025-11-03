@@ -2,6 +2,10 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { authAPI } from "../services/api";
+import LoginHeader from "../components/login/LoginHeader";
+import LoginForm from "../components/login/LoginForm";
+import MicrosoftLoginButton from "../components/login/MicrosoftLoginButton";
+import LoginFooter from "../components/login/LoginFooter";
 import "../styles/Login.css";
 
 const LoginPage: React.FC = () => {
@@ -76,92 +80,25 @@ const LoginPage: React.FC = () => {
   return (
     <div className="login-container">
       <div className="login-box">
-        <div className="login-header">
-          <div className="logo-container">
-            <div className="logo-icon">🏛️</div>
-          </div>
-          <h1>Bine ai revenit!</h1>
-          <p>Autentifică-te pentru a accesa dashboard-ul</p>
-        </div>
+        <LoginHeader />
 
-        <form className="login-form" onSubmit={handleSubmit}>
-          {error && (
-            <div className="error-message">
-              <span className="error-icon">⚠️</span>
-              {error}
-            </div>
-          )}
-
-          <div className="form-group">
-            <label htmlFor="email">
-              <span className="label-icon">📧</span>
-              Email
-            </label>
-            <input
-              type="email"
-              id="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="exemplu@email.com"
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="password">
-              <span className="label-icon">🔒</span>
-              Parolă
-            </label>
-            <input
-              type="password"
-              id="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Minim 6 caractere"
-              required
-              minLength={6}
-            />
-          </div>
-
-          <button type="submit" className="btn-primary" disabled={loading}>
-            {loading ? (
-              <>
-                <span className="spinner-small"></span>
-                Se procesează...
-              </>
-            ) : (
-              <>
-                <span className="btn-icon">🚀</span>
-                Autentifică-te
-              </>
-            )}
-          </button>
-        </form>
+        <LoginForm
+          email={email}
+          password={password}
+          error={error}
+          loading={loading}
+          onEmailChange={setEmail}
+          onPasswordChange={setPassword}
+          onSubmit={handleSubmit}
+        />
 
         <div className="divider">
           <span>sau</span>
         </div>
 
-        <button
-          type="button"
-          className="btn-microsoft"
-          onClick={handleMicrosoftLogin}
-        >
-          <svg className="microsoft-icon" viewBox="0 0 21 21">
-            <rect x="1" y="1" width="9" height="9" fill="#f25022" />
-            <rect x="1" y="11" width="9" height="9" fill="#00a4ef" />
-            <rect x="11" y="1" width="9" height="9" fill="#7fba00" />
-            <rect x="11" y="11" width="9" height="9" fill="#ffb900" />
-          </svg>
-          Continuă cu Microsoft
-        </button>
+        <MicrosoftLoginButton onClick={handleMicrosoftLogin} />
 
-        <div className="login-footer">
-          <p>
-            Conturile sunt gestionate de administrator. Dacă ai nevoie de acces,
-            contactează echipa de suport.
-          </p>
-        </div>
+        <LoginFooter />
       </div>
     </div>
   );

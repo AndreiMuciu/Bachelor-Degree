@@ -1,4 +1,7 @@
 import React, { useState } from "react";
+import HelpSidebar from "../components/help/HelpSidebar";
+import HelpCard from "../components/help/HelpCard";
+import HelpTip from "../components/help/HelpTip";
 import "../styles/Help.css";
 
 const HelpPage: React.FC = () => {
@@ -15,23 +18,11 @@ const HelpPage: React.FC = () => {
 
   return (
     <div className="help-container">
-      <div className="help-sidebar">
-        <h2>Ghid Utilizare</h2>
-        <nav className="help-nav">
-          {sections.map((section) => (
-            <button
-              key={section.id}
-              className={`help-nav-item ${
-                activeSection === section.id ? "active" : ""
-              }`}
-              onClick={() => setActiveSection(section.id)}
-            >
-              <span className="nav-item-icon">{section.icon}</span>
-              {section.title}
-            </button>
-          ))}
-        </nav>
-      </div>
+      <HelpSidebar
+        sections={sections}
+        activeSection={activeSection}
+        onSectionChange={setActiveSection}
+      />
 
       <div className="help-content">
         {activeSection === "getting-started" && (
@@ -42,34 +33,31 @@ const HelpPage: React.FC = () => {
               cum să folosești platforma.
             </p>
 
-            <div className="help-card">
-              <h3>Pasul 1: Autentificare</h3>
+            <HelpCard title="Pasul 1: Autentificare">
               <ol>
                 <li>Accesează pagina de login</li>
                 <li>Introdu adresa de email și parola</li>
                 <li>Apasă butonul "Autentificare"</li>
               </ol>
-              <div className="help-tip">
+              <HelpTip>
                 💡 <strong>Sfat:</strong> Dacă nu ai cont, contactează
                 administratorul pentru a primi acces.
-              </div>
-            </div>
+              </HelpTip>
+            </HelpCard>
 
-            <div className="help-card">
-              <h3>Pasul 2: Explorează Dashboard-ul</h3>
+            <HelpCard title="Pasul 2: Explorează Dashboard-ul">
               <p>
                 După autentificare, vei fi redirecționat către dashboard-ul
                 principal unde poți vedea toate localitățile tale.
               </p>
-            </div>
+            </HelpCard>
 
-            <div className="help-card">
-              <h3>Pasul 3: Selectează o Localitate</h3>
+            <HelpCard title="Pasul 3: Selectează o Localitate">
               <p>
                 Click pe oricare dintre cardurile de localități pentru a accesa
                 panoul de administrare specific acelei localități.
               </p>
-            </div>
+            </HelpCard>
           </div>
         )}
 
@@ -81,8 +69,7 @@ const HelpPage: React.FC = () => {
               toate localitățile tale.
             </p>
 
-            <div className="help-card">
-              <h3>Componentele Dashboard-ului</h3>
+            <HelpCard title="Componentele Dashboard-ului">
               <ul>
                 <li>
                   <strong>Header:</strong> Conține navigarea principală și
@@ -101,10 +88,9 @@ const HelpPage: React.FC = () => {
                   localității
                 </li>
               </ul>
-            </div>
+            </HelpCard>
 
-            <div className="help-card">
-              <h3>Navigare Rapidă</h3>
+            <HelpCard title="Navigare Rapidă">
               <p>
                 Folosește linkurile din header pentru a accesa rapid diferitele
                 secțiuni:
@@ -115,7 +101,7 @@ const HelpPage: React.FC = () => {
                 <li>ℹ️ Despre - Informații despre platformă</li>
                 <li>❔ FAQ - Întrebări frecvente</li>
               </ul>
-            </div>
+            </HelpCard>
           </div>
         )}
 
