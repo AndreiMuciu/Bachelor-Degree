@@ -794,9 +794,7 @@ ${htmlContent}
       }
     </style>
     <script>
-      const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-        ? 'http://localhost:5000/api/v1' 
-        : 'http://localhost:5000/api/v1';
+      const API_URL = 'https://api.bachelordegree.tech/api/v1';
       
       async function loadPost() {
         const urlParams = new URLSearchParams(window.location.search);
@@ -1339,10 +1337,8 @@ body {
     const lng = settlement?.lng || 21.2087;
 
     return `// Configuration
-// Use production API URL or fallback to localhost for development
-const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-  ? 'http://localhost:5000/api/v1' 
-  : 'http://localhost:5000/api/v1';
+// Use production API URL
+const API_URL = 'https://api.bachelordegree.tech/api/v1';
 const SETTLEMENT_ID = '${settlementId}';
 const LOCATION = { lat: ${lat}, lng: ${lng} };
 
