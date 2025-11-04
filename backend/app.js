@@ -10,15 +10,42 @@ import passport from "passport";
 
 const app = express();
 
-app.use(
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Permite domeniul principal și toate subdomeniile
+    const allowedDomain = process.env.PRODUCTION_URL.replace(
+      /^https?:\/\//,
+      ""
+    );
+
+    if (
+      !origin ||
+      origin.endsWith(`.${allowedDomain}`) ||
+      origin === `https://${allowedDomain}` ||
+      origin === `http://${allowedDomain}` ||
+      origin === "http://localhost:5173"
+    ) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true,
+};
+
+app.use(cors(corsOptions));
+
+/*app.use(
   cors({
-    origin:
+    origin: [
       process.env.PRODUCTION == "false"
         ? "http://localhost:5173"
         : process.env.PRODUCTION_URL,
+      "https://timisoara-timis.bachelordegree.tech",
+    ],
     credentials: true,
   })
-);
+);*/
 app.use(cookieParser());
 
 app.use(passport.initialize());

@@ -138,7 +138,13 @@ export const blogPostAPI = {
 export const n8nAPI = {
   createSite: async (
     settlementId: string,
-    files: { html: string; css: string; js: string }
+    files: {
+      html: string;
+      css: string;
+      js: string;
+      blogHtml?: string;
+      postHtml?: string;
+    }
   ): Promise<{ status: string; message: string; data: any }> => {
     const response = await api.post("/n8n/create-site", {
       settlementId,
@@ -149,7 +155,13 @@ export const n8nAPI = {
 
   updateSite: async (
     settlementId: string,
-    files: { html: string; css: string; js: string }
+    files: {
+      html: string;
+      css: string;
+      js: string;
+      blogHtml?: string;
+      postHtml?: string;
+    }
   ): Promise<{ status: string; message: string; data: any }> => {
     const response = await api.post("/n8n/update-site", {
       settlementId,

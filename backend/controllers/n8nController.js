@@ -60,9 +60,13 @@ export const createSite = async (req, res) => {
       "styles.css": files.css,
     };
 
-    // Add blog page if provided
+    // Add blog pages if provided
     if (files.blogHtml) {
       filesContent["blog.html"] = files.blogHtml;
+    }
+
+    if (files.postHtml) {
+      filesContent["post.html"] = files.postHtml;
     }
 
     const n8nPayload = {
@@ -222,10 +226,15 @@ export const updateSite = async (req, res) => {
       "styles.css": files.css,
     };
 
-    // Add blog page if provided
+    // Add blog pages if provided
     if (files.blogHtml) {
       console.log("Blog HTML included in update");
       filesContent["blog.html"] = files.blogHtml;
+    }
+
+    if (files.postHtml) {
+      console.log("Post HTML included in update");
+      filesContent["post.html"] = files.postHtml;
     }
 
     const n8nPayload = {

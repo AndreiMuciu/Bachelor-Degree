@@ -405,14 +405,16 @@
   background: #10b981;
   color: white;
   padding: 20px;
-  margin: -24px -24px 24px -24px;
+  margin: 0 -24px 24px -24px;
+  border-radius: 8px;
 }
 
 .component-hero {
   padding: 60px 20px;
   background: linear-gradient(135deg, #10b981 0%, #047857 100%);
   color: white;
-  margin: -24px -24px 24px -24px;
+  margin: 0 -24px 24px -24px;
+  border-radius: 8px;
 }
 
 .component-hero h1 {
@@ -872,4 +874,82 @@ textarea:focus {
 /* Map Preview Enhancement */
 .component-map .leaflet-container {
   z-index: 1;
+}
+
+/* Notification Toast */
+.notification-toast {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  z-index: 10000;
+  min-width: 320px;
+  max-width: 500px;
+  padding: 16px 20px;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  animation: slideInRight 0.3s ease-out,
+    slideOutRight 0.3s ease-in 3.7s forwards;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.notification-success {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+}
+
+.notification-error {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+}
+
+.notification-info {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+}
+
+.notification-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.notification-message {
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOutRight {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .notification-toast {
+    top: 16px;
+    right: 16px;
+    left: 16px;
+    min-width: auto;
+    max-width: none;
+  }
 }
