@@ -30,7 +30,11 @@ const BlogManagementPage: React.FC = () => {
     if (!settlementId) return;
     try {
       const data = await blogPostAPI.getBySettlement(settlementId);
-      setPosts(data);
+      // Sort posts by date (newest first)
+      const sortedPosts = data.sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
+      setPosts(sortedPosts);
     } catch (error) {
       console.error("Error fetching blog posts:", error);
     } finally {
