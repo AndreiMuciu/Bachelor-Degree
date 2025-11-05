@@ -392,7 +392,8 @@ const SettlementPage: React.FC = () => {
         html: generateHTML(),
         css: generateCSS(),
         js: generateJS(),
-        ...(hasBlog && blogPosts.length > 0
+        // ALWAYS generate blog pages if there's a blog component, even with 0 posts
+        ...(hasBlog
           ? {
               blogHtml: generateBlogPage(),
               postHtml: generatePostPage(),
