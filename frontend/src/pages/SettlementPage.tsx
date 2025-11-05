@@ -170,7 +170,11 @@ const SettlementPage: React.FC = () => {
     if (!id) return;
     try {
       const posts = await blogPostAPI.getBySettlement(id);
-      setBlogPosts(posts);
+      // Sort posts by date (newest first)
+      const sortedPosts = posts.sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
+      setBlogPosts(sortedPosts);
     } catch (error) {
       console.error("Error fetching blog posts:", error);
     }
