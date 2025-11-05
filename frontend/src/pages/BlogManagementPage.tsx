@@ -16,6 +16,8 @@ const BlogManagementPage: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingPost, setEditingPost] = useState<BlogPost | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [postsPerPage] = useState(10);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -104,6 +106,22 @@ const BlogManagementPage: React.FC = () => {
     );
   });
 
+  // Pagination logic
+  const totalPages = Math.ceil(filteredPosts.length / postsPerPage);
+  const indexOfLastPost = currentPage * postsPerPage;
+  const indexOfFirstPost = indexOfLastPost - postsPerPage;
+  const currentPosts = filteredPosts.slice(indexOfFirstPost, indexOfLastPost);
+
+  const handlePageChange = (pageNumber: number) => {
+    setCurrentPage(pageNumber);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleSearchChange = (query: string) => {
+    setSearchQuery(query);
+    setCurrentPage(1); // Reset to first page when searching
+  };
+
   return (
     <div className="blog-management-container">
       <BlogHeader
@@ -114,7 +132,7 @@ const BlogManagementPage: React.FC = () => {
       {posts.length > 0 && (
         <BlogSearchBox
           searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
+          onSearchChange={handleSearchChange}
           resultsCount={filteredPosts.length}
         />
       )}
@@ -140,11 +158,49 @@ const BlogManagementPage: React.FC = () => {
           }}
         />
       ) : (
-        <BlogPostsGrid
-          posts={filteredPosts}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-        />
+        <>
+          <BlogPostsGrid
+            posts={currentPosts}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+          />
+
+          {totalPages > 1 && (
+            <div className="pagination-container">
+              <button
+                className="pagination-btn"
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+              >
+                ← Anterior
+              </button>
+
+              <div className="pagination-pages">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                  (page) => (
+                    <button
+                      key={page}
+                      className={`pagination-page ${
+                        currentPage === page ? "active" : ""
+                      }`}
+                      onClick={() => handlePageChange(page)}
+                    >
+                      {page}
+                    </button>
+                  )
+                )}
+              </div>
+
+              <button
+                className="pagination-btn"
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+              >
+                Următor →
+              </button>
+            </div>
+          )}
+        </>
       )}
 
       {showModal && (
