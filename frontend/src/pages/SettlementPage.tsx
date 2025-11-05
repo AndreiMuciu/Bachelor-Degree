@@ -496,62 +496,6 @@ const SettlementPage: React.FC = () => {
       </div>
     </section>`;
           case "blog":
-            // Sort blog posts by date (newest first)
-            const sortedBlogPosts = [...blogPosts].sort(
-              (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-            );
-            const displayedPosts = sortedBlogPosts.slice(0, 5);
-            const remainingCount = sortedBlogPosts.length - 5;
-
-            // Helper to escape HTML and truncate text
-            const escapeHtml = (text: string): string => {
-              const div = document.createElement("div");
-              div.textContent = text;
-              return div.innerHTML;
-            };
-
-            const truncateText = (text: string, maxLength: number): string => {
-              const stripped = text.replace(/<[^>]*>/g, ""); // Remove HTML tags
-              return stripped.length > maxLength
-                ? escapeHtml(stripped.substring(0, maxLength)) + "..."
-                : escapeHtml(stripped);
-            };
-
-            const blogHTML =
-              blogPosts.length > 0
-                ? `
-${displayedPosts
-  .map(
-    (post) => `        <div class="blog-post">
-          <div class="blog-post-date">${new Date(post.date).toLocaleDateString(
-            "ro-RO",
-            {
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            }
-          )}</div>
-          <h3>${escapeHtml(post.title)}</h3>
-          <p class="blog-post-description">${escapeHtml(post.description)}</p>
-          <div class="blog-post-content">${truncateText(
-            post.content,
-            150
-          )}</div>
-        </div>`
-  )
-  .join("\n")}
-${
-  remainingCount > 0
-    ? `        <div class="blog-more">
-          <p>... și încă ${remainingCount} ${
-        remainingCount === 1 ? "postare" : "postări"
-      }</p>
-          <a href="blog.html" class="btn-view-all">Vezi toate postările</a>
-        </div>`
-    : ""
-}`
-                : '<p style="text-align: center; color: #6b7280;">Nu există postări încă.</p>';
-
             const blogTitle =
               comp.content.title !== undefined
                 ? comp.content.title
@@ -560,8 +504,9 @@ ${
             return `    <section class="blog ${comp.alignment}" id="noutati">
       <div class="layout-container">
         ${blogTitle ? `<h2>${blogTitle}</h2>` : ""}
-        <div class="blog-posts" id="blog-posts-container">
-${blogHTML}
+        <div class="loading-message" id="home-blog-loading">Se încarcă postările...</div>
+        <div class="blog-posts" id="blog-posts-container" style="display: none;">
+          <!-- Posts will be loaded dynamically via API -->
         </div>
       </div>
     </section>`;
@@ -1387,11 +1332,16 @@ document.addEventListener('DOMContentLoaded', function() {
     ${
       hasBlog
         ? `
-    // Load blog posts ONLY on blog.html (not on index.html where posts are hardcoded)
+    // Load blog posts on BOTH index.html and blog.html
     const blogContainer = document.getElementById('all-blog-posts');
+    const homeBlogContainer = document.getElementById('blog-posts-container');
+    
     if (blogContainer) {
-        // This is blog.html - load posts dynamically
+        // This is blog.html - load ALL posts with pagination
         loadBlogPosts();
+    } else if (homeBlogContainer) {
+        // This is index.html - load only first 5 posts
+        loadHomeBlogPosts();
     }`
         : ""
     }
@@ -1610,6 +1560,90 @@ function changePage(direction) {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 }`
+    : ""
+}
+
+// Load blog posts for home page (index.html) - only first 5
+${
+  hasBlog
+    ? `async function loadHomeBlogPosts() {
+    const container = document.getElementById('blog-posts-container');
+    const loadingMessage = document.getElementById('home-blog-loading');
+    
+    try {
+        const response = await fetch(\`\${API_URL}/blog-posts?settlement=\${SETTLEMENT_ID}\`);
+        
+        if (!response.ok) {
+            throw new Error('Failed to fetch blog posts');
+        }
+        
+        const data = await response.json();
+        const posts = data.data.data;
+        
+        // Hide loading message
+        if (loadingMessage) {
+            loadingMessage.style.display = 'none';
+        }
+        
+        if (posts.length === 0) {
+            container.innerHTML = '<p style="text-align: center; color: #6b7280;">Nu există postări încă.</p>';
+            container.style.display = 'grid';
+            return;
+        }
+        
+        // Sort posts by date (newest first) and take only first 5
+        const sortedPosts = posts.sort((a, b) => new Date(b.date) - new Date(a.date));
+        const displayedPosts = sortedPosts.slice(0, 5);
+        const remainingCount = sortedPosts.length - 5;
+        
+        // Render posts with truncated content
+        let postsHTML = displayedPosts.map(post => {
+            const escapedTitle = escapeHtml(post.title);
+            const escapedDescription = escapeHtml(post.description || '');
+            
+            // Strip HTML tags and truncate content
+            const strippedContent = (post.content || '').replace(/<[^>]*>/g, '');
+            const truncatedContent = strippedContent.length > 150 
+                ? escapeHtml(strippedContent.substring(0, 150)) + '...' 
+                : escapeHtml(strippedContent);
+            
+            return \`
+            <div class="blog-post">
+                <div class="blog-post-date">\${new Date(post.date).toLocaleDateString('ro-RO', { 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                })}</div>
+                <h3>\${escapedTitle}</h3>
+                <p class="blog-post-description">\${escapedDescription}</p>
+                <div class="blog-post-content">\${truncatedContent}</div>
+            </div>
+            \`;
+        }).join('');
+        
+        // Add "view all" link if there are more posts
+        if (remainingCount > 0) {
+            postsHTML += \`
+            <div class="blog-more">
+                <p>... și încă \${remainingCount} \${remainingCount === 1 ? 'postare' : 'postări'}</p>
+                <a href="blog.html" class="btn-view-all">Vezi toate postările</a>
+            </div>
+            \`;
+        }
+        
+        container.innerHTML = postsHTML;
+        container.style.display = 'grid';
+        
+    } catch (error) {
+        console.error('Error loading home blog posts:', error);
+        if (loadingMessage) {
+            loadingMessage.style.display = 'none';
+        }
+        container.innerHTML = '<p style="text-align: center; color: #ef4444;">Eroare la încărcarea postărilor.</p>';
+        container.style.display = 'grid';
+    }
+}
+`
     : ""
 }
 ${

@@ -117,7 +117,7 @@ export const entraLogin = async (req, res) => {
     const redirectUri =
       process.env.PRODUCTION === "false"
         ? "http://localhost:5000/api/v1/auth/entra/redirect"
-        : `${process.env.PRODUCTION_URL}/api/v1/auth/entra/redirect`;
+        : `https://api.${process.env.PRODUCTION_URL}/api/v1/auth/entra/redirect`;
 
     const authCodeUrlParameters = {
       scopes: ["user.read"],
@@ -140,7 +140,7 @@ export const entraRedirect = async (req, res) => {
     const redirectUri =
       process.env.PRODUCTION === "false"
         ? "http://localhost:5000/api/v1/auth/entra/redirect"
-        : `${process.env.PRODUCTION_URL}/api/v1/auth/entra/redirect`;
+        : `https://api.${process.env.PRODUCTION_URL}/api/v1/auth/entra/redirect`;
 
     const tokenRequest = {
       code: req.query.code,
@@ -168,7 +168,7 @@ export const entraRedirect = async (req, res) => {
           ? "http://localhost:5173"
           : process.env.PRODUCTION_URL;
 
-      return res.redirect(`${frontendUrl}/login?error=user_not_found`);
+      return res.redirect(`https://${frontendUrl}/login?error=user_not_found`);
     }
 
     // Update Entra ID info dacă nu există
@@ -202,12 +202,15 @@ export const entraRedirect = async (req, res) => {
 
     console.log(
       "Microsoft login - Redirecting to:",
-      `${frontendUrl}/login?login=success&token=${token.substring(0, 20)}...`
+      `$https://${frontendUrl}/login?login=success&token=${token.substring(
+        0,
+        20
+      )}...`
     );
 
     // Trimite token-ul în URL pentru ca frontend-ul să-l poată salva în localStorage
     // Redirectează direct pe /login pentru a evita pierderea parametrilor
-    res.redirect(`${frontendUrl}/login?login=success&token=${token}`);
+    res.redirect(`https://${frontendUrl}/login?login=success&token=${token}`);
   } catch (err) {
     console.error("Entra redirect error:", err);
 
