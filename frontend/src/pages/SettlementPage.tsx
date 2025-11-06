@@ -1756,53 +1756,53 @@ function initMap() {
         if (hasContact) navLabels.push("Contact");
 
         return (
-          <div
-            className={`preview-component component-header-preview ${alignmentClass}`}
-          >
-            <h3>{previewHeaderTitle}</h3>
-            <p
-              className="header-subtitle"
-              style={{
-                fontSize: "14px",
-                opacity: 0.9,
-                fontStyle: "italic",
-                margin: "5px 0 10px 0",
-              }}
-            >
-              {previewHeaderSubtitle}
-            </p>
-            {navLabels.length > 0 && (
-              <div
+          <header className={`preview-component header ${alignmentClass}`}>
+            <div className="layout-container">
+              <h1>{previewHeaderTitle}</h1>
+              <p
+                className="header-subtitle"
                 style={{
-                  marginTop: "10px",
-                  display: "flex",
-                  gap: "10px",
-                  justifyContent:
-                    alignmentClass === "align-center"
-                      ? "center"
-                      : alignmentClass === "align-right"
-                      ? "flex-end"
-                      : "flex-start",
-                  flexWrap: "wrap",
+                  fontSize: "14px",
+                  opacity: 0.9,
+                  fontStyle: "italic",
+                  margin: "5px 0 10px 0",
                 }}
               >
-                {navLabels.map((label, i) => (
-                  <span
-                    key={i}
-                    style={{
-                      padding: "5px 10px",
-                      borderRadius: "4px",
-                      background: "rgba(255,255,255,0.2)",
-                      color: "white",
-                      fontSize: "14px",
-                    }}
-                  >
-                    {label}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
+                {previewHeaderSubtitle}
+              </p>
+              {navLabels.length > 0 && (
+                <div
+                  style={{
+                    marginTop: "10px",
+                    display: "flex",
+                    gap: "10px",
+                    justifyContent:
+                      alignmentClass === "align-center"
+                        ? "center"
+                        : alignmentClass === "align-right"
+                        ? "flex-end"
+                        : "flex-start",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  {navLabels.map((label, i) => (
+                    <span
+                      key={i}
+                      style={{
+                        padding: "5px 10px",
+                        borderRadius: "4px",
+                        background: "rgba(255,255,255,0.2)",
+                        color: "white",
+                        fontSize: "14px",
+                      }}
+                    >
+                      {label}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </header>
         );
 
       case "hero":
@@ -1817,10 +1817,12 @@ function initMap() {
             : `la ${settlement?.name || ""}`;
 
         return (
-          <div className={`preview-component component-hero ${alignmentClass}`}>
-            {previewHeroTitle && <h1>{previewHeroTitle}</h1>}
-            {previewHeroSubtitle && <p>{previewHeroSubtitle}</p>}
-          </div>
+          <section className={`preview-component hero ${alignmentClass}`}>
+            <div className="layout-container">
+              {previewHeroTitle && <h1>{previewHeroTitle}</h1>}
+              {previewHeroSubtitle && <p>{previewHeroSubtitle}</p>}
+            </div>
+          </section>
         );
 
       case "about":
@@ -1831,15 +1833,18 @@ function initMap() {
             : "Despre";
 
         return (
-          <div
-            className={`preview-component component-about ${alignmentClass}`}
+          <section
+            className={`preview-component about ${alignmentClass}`}
+            id="despre"
           >
-            {previewAboutTitle && <h2>{previewAboutTitle}</h2>}
-            <p>
-              {component.content.description ||
-                "Descriere despre localitate..."}
-            </p>
-          </div>
+            <div className="layout-container">
+              {previewAboutTitle && <h2>{previewAboutTitle}</h2>}
+              <p>
+                {component.content.description ||
+                  "Descriere despre localitate..."}
+              </p>
+            </div>
+          </section>
         );
 
       case "services":
@@ -1850,15 +1855,15 @@ function initMap() {
             : "Servicii";
 
         return (
-          <div
-            className={`preview-component component-services ${alignmentClass}`}
-          >
-            {previewServicesTitle && <h2>{previewServicesTitle}</h2>}
-            <p>
-              {component.content.description ||
-                "Lista serviciilor disponibile..."}
-            </p>
-          </div>
+          <section className={`preview-component services ${alignmentClass}`}>
+            <div className="layout-container">
+              {previewServicesTitle && <h2>{previewServicesTitle}</h2>}
+              <p>
+                {component.content.description ||
+                  "Lista serviciilor disponibile..."}
+              </p>
+            </div>
+          </section>
         );
 
       case "blog":
@@ -1869,134 +1874,141 @@ function initMap() {
             : "Ultimele Noutăți";
 
         return (
-          <div className={`preview-component component-blog ${alignmentClass}`}>
-            {previewBlogTitle && <h2>{previewBlogTitle}</h2>}
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-                gap: "20px",
-                marginTop: "24px",
-              }}
-            >
-              {blogPosts.length === 0 ? (
-                <div
-                  style={{
-                    gridColumn: "1 / -1",
-                    background: "#f9fafb",
-                    padding: "40px 20px",
-                    borderRadius: "12px",
-                    textAlign: "center",
-                    border: "2px dashed #d1d5db",
-                  }}
-                >
-                  <div style={{ fontSize: "48px", marginBottom: "12px" }}>
-                    📝
-                  </div>
-                  <p
+          <section
+            className={`preview-component blog ${alignmentClass}`}
+            id="noutati"
+          >
+            <div className="layout-container">
+              {previewBlogTitle && <h2>{previewBlogTitle}</h2>}
+              <div
+                className="blog-posts"
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+                  gap: "20px",
+                  marginTop: "24px",
+                }}
+              >
+                {blogPosts.length === 0 ? (
+                  <div
                     style={{
-                      fontSize: "16px",
-                      color: "#6b7280",
-                      fontWeight: "500",
+                      gridColumn: "1 / -1",
+                      background: "#f9fafb",
+                      padding: "40px 20px",
+                      borderRadius: "12px",
+                      textAlign: "center",
+                      border: "2px dashed #d1d5db",
                     }}
                   >
-                    Nicio postare încă
-                  </p>
-                  <p
-                    style={{
-                      fontSize: "14px",
-                      color: "#9ca3af",
-                      marginTop: "8px",
-                    }}
-                  >
-                    Adaugă prima postare pentru a o vedea aici!
-                  </p>
-                </div>
-              ) : (
-                <>
-                  {[...blogPosts]
-                    .sort(
-                      (a, b) =>
-                        new Date(b.date).getTime() - new Date(a.date).getTime()
-                    )
-                    .slice(0, 5)
-                    .map((post) => (
-                      <div
-                        key={post._id}
-                        style={{
-                          background: "white",
-                          padding: "20px",
-                          borderRadius: "12px",
-                          border: "1px solid #e5e7eb",
-                          boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-                          transition: "all 0.3s ease",
-                        }}
-                      >
-                        <div
-                          style={{
-                            fontSize: "12px",
-                            color: "#10b981",
-                            fontWeight: "600",
-                            marginBottom: "10px",
-                            textTransform: "uppercase",
-                            letterSpacing: "0.5px",
-                          }}
-                        >
-                          {new Date(post.date).toLocaleDateString("ro-RO", {
-                            day: "numeric",
-                            month: "short",
-                            year: "numeric",
-                          })}
-                        </div>
-                        <h4
-                          style={{
-                            marginBottom: "12px",
-                            fontSize: "18px",
-                            color: "#1f2937",
-                            fontWeight: "700",
-                            lineHeight: "1.4",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            display: "-webkit-box",
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: "vertical",
-                          }}
-                        >
-                          {post.title}
-                        </h4>
-                        <p
-                          style={{
-                            fontSize: "14px",
-                            color: "#6b7280",
-                            lineHeight: "1.6",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            display: "-webkit-box",
-                            WebkitLineClamp: 3,
-                            WebkitBoxOrient: "vertical",
-                          }}
-                        >
-                          {post.description}
-                        </p>
-                      </div>
-                    ))}
-                  {blogPosts.length > 5 && (
-                    <div
+                    <div style={{ fontSize: "48px", marginBottom: "12px" }}>
+                      📝
+                    </div>
+                    <p
                       style={{
-                        textAlign: "center",
-                        padding: "20px",
-                        color: "#6b7280",
                         fontSize: "16px",
-                        fontStyle: "italic",
+                        color: "#6b7280",
+                        fontWeight: "500",
                       }}
                     >
-                      ... și încă {blogPosts.length - 5} postări
-                    </div>
-                  )}
-                </>
-              )}
+                      Nicio postare încă
+                    </p>
+                    <p
+                      style={{
+                        fontSize: "14px",
+                        color: "#9ca3af",
+                        marginTop: "8px",
+                      }}
+                    >
+                      Adaugă prima postare pentru a o vedea aici!
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    {[...blogPosts]
+                      .sort(
+                        (a, b) =>
+                          new Date(b.date).getTime() -
+                          new Date(a.date).getTime()
+                      )
+                      .slice(0, 5)
+                      .map((post) => (
+                        <div
+                          key={post._id}
+                          style={{
+                            background: "white",
+                            padding: "20px",
+                            borderRadius: "12px",
+                            border: "1px solid #e5e7eb",
+                            boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+                            transition: "all 0.3s ease",
+                          }}
+                        >
+                          <div
+                            style={{
+                              fontSize: "12px",
+                              color: "#10b981",
+                              fontWeight: "600",
+                              marginBottom: "10px",
+                              textTransform: "uppercase",
+                              letterSpacing: "0.5px",
+                            }}
+                          >
+                            {new Date(post.date).toLocaleDateString("ro-RO", {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                            })}
+                          </div>
+                          <h4
+                            style={{
+                              marginBottom: "12px",
+                              fontSize: "18px",
+                              color: "#1f2937",
+                              fontWeight: "700",
+                              lineHeight: "1.4",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              display: "-webkit-box",
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: "vertical",
+                            }}
+                          >
+                            {post.title}
+                          </h4>
+                          <p
+                            style={{
+                              fontSize: "14px",
+                              color: "#6b7280",
+                              lineHeight: "1.6",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              display: "-webkit-box",
+                              WebkitLineClamp: 3,
+                              WebkitBoxOrient: "vertical",
+                            }}
+                          >
+                            {post.description}
+                          </p>
+                        </div>
+                      ))}
+                    {blogPosts.length > 5 && (
+                      <div
+                        style={{
+                          textAlign: "center",
+                          padding: "20px",
+                          color: "#6b7280",
+                          fontSize: "16px",
+                          fontStyle: "italic",
+                        }}
+                      >
+                        ... și încă {blogPosts.length - 5} postări
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
-          </div>
+          </section>
         );
 
       case "map":
@@ -2007,54 +2019,60 @@ function initMap() {
             : "Localizare";
 
         return (
-          <div className={`preview-component component-map ${alignmentClass}`}>
-            {previewMapTitle && <h2>{previewMapTitle}</h2>}
-            <div
-              style={{
-                width: "100%",
-                height: "400px",
-                marginTop: "20px",
-                borderRadius: "12px",
-                overflow: "hidden",
-                border: "2px solid #e5e7eb",
-                boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-              }}
-            >
-              {settlement ? (
-                <MapContainer
-                  center={[settlement.lat, settlement.lng]}
-                  zoom={11}
-                  style={{ height: "100%", width: "100%" }}
-                  scrollWheelZoom={false}
-                >
-                  <TileLayer
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  />
-                  <Marker position={[settlement.lat, settlement.lng]}>
-                    <Popup>
-                      <strong>{settlement.name}</strong>
-                      <br />
-                      {settlement.judet}
-                    </Popup>
-                  </Marker>
-                </MapContainer>
-              ) : (
-                <div
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    background: "#f3f4f6",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <p style={{ color: "#6b7280" }}>Se încarcă harta...</p>
-                </div>
-              )}
+          <section
+            className={`preview-component map ${alignmentClass}`}
+            id="localizare"
+          >
+            <div className="layout-container">
+              {previewMapTitle && <h2>{previewMapTitle}</h2>}
+              <div
+                id="map"
+                style={{
+                  width: "100%",
+                  height: "400px",
+                  marginTop: "20px",
+                  borderRadius: "12px",
+                  overflow: "hidden",
+                  border: "2px solid #e5e7eb",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                }}
+              >
+                {settlement ? (
+                  <MapContainer
+                    center={[settlement.lat, settlement.lng]}
+                    zoom={11}
+                    style={{ height: "100%", width: "100%" }}
+                    scrollWheelZoom={false}
+                  >
+                    <TileLayer
+                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    />
+                    <Marker position={[settlement.lat, settlement.lng]}>
+                      <Popup>
+                        <strong>{settlement.name}</strong>
+                        <br />
+                        {settlement.judet}
+                      </Popup>
+                    </Marker>
+                  </MapContainer>
+                ) : (
+                  <div
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      background: "#f3f4f6",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <p style={{ color: "#6b7280" }}>Se încarcă harta...</p>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          </section>
         );
 
       case "contact":
@@ -2065,21 +2083,26 @@ function initMap() {
             : "Contact";
 
         return (
-          <div
-            className={`preview-component component-contact ${alignmentClass}`}
+          <section
+            className={`preview-component contact ${alignmentClass}`}
+            id="contact"
           >
-            {previewContactTitle && <h2>{previewContactTitle}</h2>}
-            <p>{component.content.description || "Informații de contact..."}</p>
-          </div>
+            <div className="layout-container">
+              {previewContactTitle && <h2>{previewContactTitle}</h2>}
+              <p>
+                {component.content.description || "Informații de contact..."}
+              </p>
+            </div>
+          </section>
         );
 
       case "footer":
         return (
-          <div
-            className={`preview-component component-footer ${alignmentClass}`}
-          >
-            <p>© 2025 {settlement?.name}. Toate drepturile rezervate.</p>
-          </div>
+          <footer className={`preview-component footer ${alignmentClass}`}>
+            <div className="layout-container">
+              <p>© 2025 {settlement?.name}. Toate drepturile rezervate.</p>
+            </div>
+          </footer>
         );
 
       default:
