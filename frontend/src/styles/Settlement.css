@@ -401,7 +401,8 @@
   text-align: right;
 }
 
-.component-header-preview {
+.component-header-preview,
+.header {
   background: #10b981;
   color: white;
   padding: 20px;
@@ -409,7 +410,8 @@
   border-radius: 8px;
 }
 
-.component-hero {
+.component-hero,
+.hero {
   padding: 60px 20px;
   background: linear-gradient(135deg, #10b981 0%, #047857 100%);
   color: white;
@@ -417,19 +419,24 @@
   border-radius: 8px;
 }
 
-.component-hero h1 {
+.component-hero h1,
+.hero h1 {
   font-size: 48px;
   margin-bottom: 16px;
 }
 
-.component-hero p {
+.component-hero p,
+.hero p {
   font-size: 20px;
   opacity: 0.9;
 }
 
 .component-about h2,
 .component-services h2,
-.component-contact h2 {
+.component-contact h2,
+.about h2,
+.services h2,
+.contact h2 {
   font-size: 32px;
   color: #333;
   margin-bottom: 16px;
@@ -437,13 +444,17 @@
 
 .component-about p,
 .component-services p,
-.component-contact p {
+.component-contact p,
+.about p,
+.services p,
+.contact p {
   font-size: 16px;
   color: #666;
   line-height: 1.6;
 }
 
-.component-footer {
+.component-footer,
+.footer {
   background: #333;
   color: white;
   padding: 20px;
