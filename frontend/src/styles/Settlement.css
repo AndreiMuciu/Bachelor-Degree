@@ -40,7 +40,7 @@
   background: white;
   color: #10b981;
   border: 2px solid #10b981;
-  padding: 8px 16px;
+  padding: 0 16px;
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
@@ -51,8 +51,11 @@
   align-items: center;
   justify-content: center;
   height: 38px;
-  line-height: 1;
+  line-height: 38px;
   box-sizing: border-box;
+  vertical-align: top;
+  font-family: inherit;
+  margin: 0;
 }
 
 .btn-back:hover {
@@ -64,7 +67,7 @@
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border: none;
-  padding: 8px 16px;
+  padding: 0 16px;
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
@@ -75,8 +78,11 @@
   align-items: center;
   justify-content: center;
   height: 38px;
-  line-height: 1;
+  line-height: 38px;
   box-sizing: border-box;
+  vertical-align: top;
+  font-family: inherit;
+  margin: 0;
 }
 
 .btn-blog:hover {
@@ -88,7 +94,7 @@
   background: #10b981;
   color: white;
   border: none;
-  padding: 8px 16px;
+  padding: 0 16px;
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
@@ -98,8 +104,12 @@
   align-items: center;
   justify-content: center;
   height: 38px;
-  line-height: 1;
+  line-height: 38px;
   box-sizing: border-box;
+  vertical-align: top;
+  text-decoration: none;
+  font-family: inherit;
+  margin: 0;
 }
 
 .btn-save:hover {
@@ -117,7 +127,7 @@
   background: #6b7280;
   color: white;
   border: none;
-  padding: 8px 16px;
+  padding: 0 16px;
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
@@ -127,9 +137,12 @@
   align-items: center;
   justify-content: center;
   height: 38px;
-  line-height: 1;
-  vertical-align: middle;
+  line-height: 38px;
   box-sizing: border-box;
+  vertical-align: top;
+  text-decoration: none;
+  font-family: inherit;
+  margin: 0;
 }
 
 .btn-secondary:hover {

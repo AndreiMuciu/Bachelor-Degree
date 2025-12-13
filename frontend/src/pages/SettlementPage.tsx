@@ -64,6 +64,7 @@ const SettlementPage: React.FC = () => {
   const [settlement, setSettlement] = useState<Settlement | null>(null);
   const [loading, setLoading] = useState(true);
   const [components, setComponents] = useState<WebsiteComponent[]>([]);
+  const [isInitialized, setIsInitialized] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [selectedComponentType, setSelectedComponentType] =
     useState<string>("");
@@ -91,15 +92,14 @@ const SettlementPage: React.FC = () => {
     message: string;
     type: "success" | "error" | "info";
   }>({ show: false, message: "", type: "success" });
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  // Cache keys for sessionStorage
+  // Cache keys for localStorage
   const getCacheKey = (settlementId: string) => `preview_cache_${settlementId}`;
 
   // Load cached preview data
   const loadFromCache = (settlementId: string) => {
     try {
-      const cached = sessionStorage.getItem(getCacheKey(settlementId));
+      const cached = localStorage.getItem(getCacheKey(settlementId));
       if (cached) {
         const data = JSON.parse(cached);
         return {
@@ -125,7 +125,7 @@ const SettlementPage: React.FC = () => {
         customCSS: cssData,
         lastModified: new Date().toISOString(),
       };
-      sessionStorage.setItem(getCacheKey(settlementId), JSON.stringify(data));
+      localStorage.setItem(getCacheKey(settlementId), JSON.stringify(data));
     } catch (error) {
       console.error("Error saving to cache:", error);
     }
@@ -134,9 +134,8 @@ const SettlementPage: React.FC = () => {
   // Clear cache for settlement
   const clearCache = (settlementId: string) => {
     try {
-      sessionStorage.removeItem(getCacheKey(settlementId));
+      localStorage.removeItem(getCacheKey(settlementId));
       showNotification("🗑️ Cache-ul a fost șters!", "success");
-      setHasUnsavedChanges(false);
     } catch (error) {
       console.error("Error clearing cache:", error);
     }
@@ -171,17 +170,20 @@ const SettlementPage: React.FC = () => {
           console.log("SettlementPage - Loading from cache:", cached);
           setComponents(cached.components);
           setCustomCSS(cached.customCSS);
-          setHasUnsavedChanges(true);
           showNotification(
             "📦 Progresul anterior a fost restaurat din cache!",
             "info"
           );
         }
 
+        // Mark as initialized after loading
+        setIsInitialized(true);
+
         // Fetch blog posts for this settlement
         await fetchBlogPosts();
       } catch (error) {
         console.error("Error fetching settlement:", error);
+        setIsInitialized(true);
       } finally {
         setLoading(false);
       }
@@ -190,16 +192,17 @@ const SettlementPage: React.FC = () => {
     fetchSettlement();
   }, [id]);
 
-  // Auto-save to cache when components or customCSS change
+  // Auto-save to cache when components or customCSS change (only after initialization)
   useEffect(() => {
-    if (id && components.length > 0) {
+    if (id && components.length > 0 && isInitialized) {
       saveToCache(id, components, customCSS);
-      setHasUnsavedChanges(true);
     }
-  }, [components, customCSS, id]);
+  }, [components, customCSS, id, isInitialized]);
 
-  // Ensure header and footer are always present
+  // Ensure header and footer are always present (only after initialization)
   useEffect(() => {
+    if (!isInitialized) return;
+
     const hasHeader = components.some((c) => c.type === "header");
     const hasFooter = components.some((c) => c.type === "footer");
 
@@ -236,7 +239,7 @@ const SettlementPage: React.FC = () => {
 
       setComponents(newComponents.map((c, i) => ({ ...c, position: i })));
     }
-  }, [components, settlement]);
+  }, [components, settlement, isInitialized]);
 
   const fetchBlogPosts = async () => {
     if (!id) return;
@@ -479,13 +482,11 @@ const SettlementPage: React.FC = () => {
         const response = await n8nAPI.updateSite(id, files);
         showNotification("🎉 Site actualizat cu succes!", "success");
         console.log("Site updated:", response);
-        setHasUnsavedChanges(false);
       } else {
         // Create new site
         const response = await n8nAPI.createSite(id, files);
         showNotification("🎉 Site creat cu succes!", "success");
         console.log("Site created:", response);
-        setHasUnsavedChanges(false);
 
         // Update local settlement state to reflect active status
         setSettlement({ ...settlement, active: true });
