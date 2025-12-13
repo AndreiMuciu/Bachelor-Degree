@@ -83,6 +83,45 @@
   background: #45a049;
 }
 
+/* Cache indicator and reset button */
+.cache-indicator {
+  background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%);
+  color: #6b5b00;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  animation: pulse-glow 2s infinite;
+}
+
+@keyframes pulse-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(253, 203, 110, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 8px 2px rgba(253, 203, 110, 0.6);
+  }
+}
+
+.btn-secondary {
+  background: #6c757d;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.btn-secondary:hover {
+  background: #5a6268;
+}
+
 .settlement-content {
   max-width: 1400px;
   margin: 0 auto;

@@ -91,6 +91,56 @@ const SettlementPage: React.FC = () => {
     message: string;
     type: "success" | "error" | "info";
   }>({ show: false, message: "", type: "success" });
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  // Cache keys for sessionStorage
+  const getCacheKey = (settlementId: string) => `preview_cache_${settlementId}`;
+
+  // Load cached preview data
+  const loadFromCache = (settlementId: string) => {
+    try {
+      const cached = sessionStorage.getItem(getCacheKey(settlementId));
+      if (cached) {
+        const data = JSON.parse(cached);
+        return {
+          components: data.components || [],
+          customCSS: data.customCSS || "",
+        };
+      }
+    } catch (error) {
+      console.error("Error loading from cache:", error);
+    }
+    return null;
+  };
+
+  // Save preview data to cache
+  const saveToCache = (
+    settlementId: string,
+    componentsData: WebsiteComponent[],
+    cssData: string
+  ) => {
+    try {
+      const data = {
+        components: componentsData,
+        customCSS: cssData,
+        lastModified: new Date().toISOString(),
+      };
+      sessionStorage.setItem(getCacheKey(settlementId), JSON.stringify(data));
+    } catch (error) {
+      console.error("Error saving to cache:", error);
+    }
+  };
+
+  // Clear cache for settlement
+  const clearCache = (settlementId: string) => {
+    try {
+      sessionStorage.removeItem(getCacheKey(settlementId));
+      showNotification("🗑️ Cache-ul a fost șters!", "success");
+      setHasUnsavedChanges(false);
+    } catch (error) {
+      console.error("Error clearing cache:", error);
+    }
+  };
 
   // Show notification function
   const showNotification = (
@@ -114,6 +164,20 @@ const SettlementPage: React.FC = () => {
         const data = await settlementAPI.getById(id);
         console.log("SettlementPage - Settlement fetched:", data);
         setSettlement(data);
+
+        // Load cached preview data if available
+        const cached = loadFromCache(id);
+        if (cached && cached.components.length > 0) {
+          console.log("SettlementPage - Loading from cache:", cached);
+          setComponents(cached.components);
+          setCustomCSS(cached.customCSS);
+          setHasUnsavedChanges(true);
+          showNotification(
+            "📦 Progresul anterior a fost restaurat din cache!",
+            "info"
+          );
+        }
+
         // Fetch blog posts for this settlement
         await fetchBlogPosts();
       } catch (error) {
@@ -125,6 +189,14 @@ const SettlementPage: React.FC = () => {
 
     fetchSettlement();
   }, [id]);
+
+  // Auto-save to cache when components or customCSS change
+  useEffect(() => {
+    if (id && components.length > 0) {
+      saveToCache(id, components, customCSS);
+      setHasUnsavedChanges(true);
+    }
+  }, [components, customCSS, id]);
 
   // Ensure header and footer are always present
   useEffect(() => {
@@ -407,11 +479,13 @@ const SettlementPage: React.FC = () => {
         const response = await n8nAPI.updateSite(id, files);
         showNotification("🎉 Site actualizat cu succes!", "success");
         console.log("Site updated:", response);
+        setHasUnsavedChanges(false);
       } else {
         // Create new site
         const response = await n8nAPI.createSite(id, files);
         showNotification("🎉 Site creat cu succes!", "success");
         console.log("Site created:", response);
+        setHasUnsavedChanges(false);
 
         // Update local settlement state to reflect active status
         setSettlement({ ...settlement, active: true });
@@ -2148,6 +2222,32 @@ function initMap() {
             </Link>
             {components.length > 0 && (
               <>
+                {hasUnsavedChanges && (
+                  <span
+                    className="cache-indicator"
+                    title="Există modificări în cache"
+                  >
+                    📦 Cache activ
+                  </span>
+                )}
+                <button
+                  className="btn-secondary"
+                  onClick={() => {
+                    if (
+                      id &&
+                      confirm(
+                        "Ești sigur că vrei să ștergi cache-ul? Progresul nesalvat va fi pierdut."
+                      )
+                    ) {
+                      clearCache(id);
+                      setComponents([]);
+                      setCustomCSS("");
+                    }
+                  }}
+                  title="Șterge cache-ul și începe de la zero"
+                >
+                  🗑️ Resetează
+                </button>
                 <button
                   className="btn-save"
                   onClick={() => setShowStyleEditor(true)}
