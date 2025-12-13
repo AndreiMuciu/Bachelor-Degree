@@ -24,7 +24,7 @@ const AboutPage: React.FC = () => {
           <FeaturesGrid />
         </Section>
 
-        <Section icon="�" title="Viziunea Noastră">
+        <Section icon="👀" title="Viziunea Noastră">
           <p>
             Credem într-o Românie digitalizată, unde fiecare localitate,
             indiferent de mărime, are acces la instrumente moderne de comunicare
