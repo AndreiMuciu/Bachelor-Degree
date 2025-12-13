@@ -2222,14 +2222,6 @@ function initMap() {
             </Link>
             {components.length > 0 && (
               <>
-                {hasUnsavedChanges && (
-                  <span
-                    className="cache-indicator"
-                    title="Există modificări în cache"
-                  >
-                    📦 Cache activ
-                  </span>
-                )}
                 <button
                   className="btn-secondary"
                   onClick={() => {
