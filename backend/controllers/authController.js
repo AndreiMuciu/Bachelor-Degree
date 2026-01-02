@@ -2,6 +2,7 @@ import * as msal from "@azure/msal-node";
 import jwt from "jsonwebtoken";
 import { promisify } from "util";
 import User from "../models/userModel.js";
+import Settlement from "../models/settlementModel.js";
 
 const entraConfig = {
   auth: {
@@ -63,7 +64,7 @@ export const login = async (req, res, next) => {
       });
     }
 
-    const user = await User.findOne({ email }).select("+password");
+    let user = await User.findOne({ email }).select("+password");
 
     if (!user || !(await user.correctPassword(password, user.password))) {
       return res.status(401).json({
@@ -73,7 +74,13 @@ export const login = async (req, res, next) => {
     }
 
     // Populate settlements before sending response
-    await user.populate("settlements");
+    if (user.role === "admin") {
+      const settlements = await Settlement.find();
+      user = user.toObject();
+      user.settlements = settlements;
+    } else {
+      await user.populate("settlements");
+    }
 
     createSendToken(user, 200, req, res);
   } catch (err) {
@@ -86,13 +93,20 @@ export const login = async (req, res, next) => {
 
 export const signup = async (req, res) => {
   try {
-    const newUser = await User.create({
+    let newUser = await User.create({
       email: req.body.email,
       password: req.body.password,
+      role: req.body.role,
     });
 
     // Populate settlements before sending response
-    await newUser.populate("settlements");
+    if (newUser.role === "admin") {
+      const settlements = await Settlement.find();
+      newUser = newUser.toObject();
+      newUser.settlements = settlements;
+    } else {
+      await newUser.populate("settlements");
+    }
 
     createSendToken(newUser, 201, req, res);
   } catch (err) {

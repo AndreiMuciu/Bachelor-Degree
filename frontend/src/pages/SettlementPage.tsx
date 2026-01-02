@@ -2194,7 +2194,18 @@ function initMap() {
   }
 
   if (!settlement) {
-    return <div>Settlement not found</div>;
+    return (
+      <div className="error-container">
+        <h2>Acces Interzis sau Localitate Inexistentă</h2>
+        <p>
+          Nu aveți permisiunea de a accesa această localitate sau aceasta nu
+          există.
+        </p>
+        <Link to="/" className="btn-primary">
+          Înapoi la Dashboard
+        </Link>
+      </div>
+    );
   }
 
   const previewWidth =
