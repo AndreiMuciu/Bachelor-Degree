@@ -4,7 +4,7 @@ import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import mongoSanitize from "express-mongo-sanitize";
-import xss from "xss-clean";
+import xss from "xss";
 import userRouter from "./routes/userRoutes.js";
 import blogPostRouter from "./routes/blogPostRoutes.js";
 import settlementRouter from "./routes/settlementRoutes.js";
@@ -79,11 +79,77 @@ app.use(passport.initialize());
 
 app.use(express.json());
 
+app.use(express.urlencoded({ extended: true }));
 // Data sanitization împotriva NoSQL query injection
-app.use(mongoSanitize());
+app.use((req, res, next) => {
+  // Curățăm body-ul (principalul vector de atac)
+  if (req.body) mongoSanitize.sanitize(req.body);
+
+  // Curățăm parametrii din URL
+  if (req.params) mongoSanitize.sanitize(req.params);
+
+  // Curățăm query params, dar FĂRĂ a încerca să suprascriem req.query
+  // (mongoSanitize.sanitize modifică obiectul prin referință, deci e suficient)
+  if (req.query) mongoSanitize.sanitize(req.query);
+
+  next();
+});
 
 // Data sanitization împotriva XSS (Cross-Site Scripting)
-app.use(xss());
+// Funcție recursivă pentru a curăța obiectele (body, query, params)
+// Funcție recursivă pentru a curăța obiectele
+// Lista de chei care conțin cod și nu trebuie sanitizate
+const CODE_KEYS = new Set([
+  "html",
+  "css",
+  "js",
+  "bloghtml",
+  "posthtml",
+  "index.html",
+  "script.js",
+  "styles.css",
+  "blog.html",
+  "post.html",
+]);
+
+const cleanObject = (data, parentKey = null) => {
+  if (!data) return data;
+
+  for (const key in data) {
+    const lowerKey = key.toLowerCase();
+
+    // 1. LOGICA DE SKIP: Verificăm dacă cheia este pentru cod
+    // Skip dacă:
+    // - cheia este în lista de chei de cod (html, css, js, etc.)
+    // - cheia se termină cu extensie de cod (.html, .js, .css)
+    // - suntem în obiectul "files" (parentKey === 'files')
+    if (
+      CODE_KEYS.has(lowerKey) ||
+      lowerKey.endsWith("html") ||
+      lowerKey.endsWith("js") ||
+      lowerKey.endsWith("css") ||
+      parentKey === "files"
+    ) {
+      continue; // Treci la următoarea cheie fără să modifici nimic
+    }
+
+    // 2. Curățare standard
+    if (typeof data[key] === "string") {
+      data[key] = xss(data[key]);
+    } else if (typeof data[key] === "object" && data[key] !== null) {
+      // Recursivitate pentru obiecte imbricate, pasăm cheia curentă ca parent
+      cleanObject(data[key], lowerKey);
+    }
+  }
+};
+
+// Middleware XSS manual (care nu crapă aplicația)
+app.use((req, res, next) => {
+  if (req.body) cleanObject(req.body);
+  if (req.query) cleanObject(req.query);
+  if (req.params) cleanObject(req.params);
+  next();
+});
 
 // Aplică rate limiter strict pentru rutele de autentificare
 app.use("/api/v1/auth/login", authLimiter);
