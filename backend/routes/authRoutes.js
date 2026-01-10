@@ -10,7 +10,7 @@ import {
 const router = express.Router();
 
 // Login/Signup normal
-router.post("/signup", signup);
+// router.post("/signup", signup);
 router.post("/login", login);
 router.get("/logout", logout);
 
