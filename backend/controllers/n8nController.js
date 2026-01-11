@@ -69,6 +69,11 @@ export const createSite = async (req, res) => {
       filesContent["post.html"] = files.postHtml;
     }
 
+    // Add members page if provided
+    if (files.membersHtml) {
+      filesContent["members.html"] = files.membersHtml;
+    }
+
     const n8nPayload = {
       name: `${settlement.name}-${settlement.judet.toUpperCase()}`,
       "files-content": filesContent,
@@ -235,6 +240,12 @@ export const updateSite = async (req, res) => {
     if (files.postHtml) {
       console.log("Post HTML included in update");
       filesContent["post.html"] = files.postHtml;
+    }
+
+    // Add members page if provided
+    if (files.membersHtml) {
+      console.log("Members HTML included in update");
+      filesContent["members.html"] = files.membersHtml;
     }
 
     const n8nPayload = {
