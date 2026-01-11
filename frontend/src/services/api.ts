@@ -5,6 +5,7 @@ import type {
   User,
   Settlement,
   BlogPost,
+  Member,
 } from "../types";
 
 const API_BASE_URL = "https://api.bachelordegree.tech/api/v1";
@@ -134,6 +135,48 @@ export const blogPostAPI = {
   },
 };
 
+// Member endpoints
+export const memberAPI = {
+  getAll: async (): Promise<Member[]> => {
+    const response = await api.get<{ data: { data: Member[] } }>("/members");
+    return response.data.data.data;
+  },
+
+  getBySettlement: async (settlementId: string): Promise<Member[]> => {
+    const response = await api.get<{ data: { data: Member[] } }>(
+      `/members?settlement=${settlementId}`
+    );
+    return response.data.data.data;
+  },
+
+  getById: async (id: string): Promise<Member> => {
+    const response = await api.get<{ data: { data: Member } }>(
+      `/members/${id}`
+    );
+    return response.data.data.data;
+  },
+
+  create: async (data: Partial<Member>): Promise<Member> => {
+    const response = await api.post<{ data: { data: Member } }>(
+      "/members",
+      data
+    );
+    return response.data.data.data;
+  },
+
+  update: async (id: string, data: Partial<Member>): Promise<Member> => {
+    const response = await api.patch<{ data: { data: Member } }>(
+      `/members/${id}`,
+      data
+    );
+    return response.data.data.data;
+  },
+
+  delete: async (id: string): Promise<void> => {
+    await api.delete(`/members/${id}`);
+  },
+};
+
 // N8N endpoints
 export const n8nAPI = {
   createSite: async (
@@ -144,6 +187,7 @@ export const n8nAPI = {
       js: string;
       blogHtml?: string;
       postHtml?: string;
+      membersHtml?: string;
     }
   ): Promise<{ status: string; message: string; data: any }> => {
     const response = await api.post("/n8n/create-site", {
@@ -161,6 +205,7 @@ export const n8nAPI = {
       js: string;
       blogHtml?: string;
       postHtml?: string;
+      membersHtml?: string;
     }
   ): Promise<{ status: string; message: string; data: any }> => {
     const response = await api.post("/n8n/update-site", {

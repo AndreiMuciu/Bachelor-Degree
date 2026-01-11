@@ -3,8 +3,8 @@ import { useParams, Link } from "react-router-dom";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-import { settlementAPI, blogPostAPI, n8nAPI } from "../services/api";
-import type { Settlement, WebsiteComponent, BlogPost } from "../types";
+import { settlementAPI, blogPostAPI, memberAPI, n8nAPI } from "../services/api";
+import type { Settlement, WebsiteComponent, BlogPost, Member } from "../types";
 import "../styles/Settlement.css";
 
 // Fix pentru iconițele Leaflet
@@ -54,6 +54,7 @@ const componentTypes = [
   { type: "about", label: "Despre", icon: "📝" },
   { type: "services", label: "Servicii", icon: "⚙️" },
   { type: "blog", label: "Blog", icon: "📰" },
+  { type: "members", label: "Membri", icon: "👥" },
   { type: "map", label: "Hartă", icon: "🗺️" },
   { type: "contact", label: "Contact", icon: "📞" },
   { type: "footer", label: "Footer", icon: "📄" },
@@ -77,6 +78,7 @@ const SettlementPage: React.FC = () => {
   );
   const [showBlogModal, setShowBlogModal] = useState(false);
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
+  const [members, setMembers] = useState<Member[]>([]);
   const [blogFormData, setBlogFormData] = useState({
     title: "",
     description: "",
@@ -181,6 +183,7 @@ const SettlementPage: React.FC = () => {
 
         // Fetch blog posts for this settlement
         await fetchBlogPosts();
+        await fetchMembers();
       } catch (error) {
         console.error("Error fetching settlement:", error);
         setIsInitialized(true);
@@ -252,6 +255,20 @@ const SettlementPage: React.FC = () => {
       setBlogPosts(sortedPosts);
     } catch (error) {
       console.error("Error fetching blog posts:", error);
+    }
+  };
+
+  const fetchMembers = async () => {
+    if (!id) return;
+    try {
+      const membersData = await memberAPI.getBySettlement(id);
+      // Sort members alphabetically by last name
+      const sortedMembers = membersData.sort((a, b) =>
+        a.lastName.localeCompare(b.lastName)
+      );
+      setMembers(sortedMembers);
+    } catch (error) {
+      console.error("Error fetching members:", error);
     }
   };
 
@@ -461,6 +478,7 @@ const SettlementPage: React.FC = () => {
     try {
       // Check if there's a blog component
       const hasBlog = components.some((c) => c.type === "blog");
+      const hasMembers = components.some((c) => c.type === "members");
 
       // Generate code files
       const files = {
@@ -474,7 +492,17 @@ const SettlementPage: React.FC = () => {
               postHtml: generatePostPage(),
             }
           : {}),
+        // ALWAYS generate members page if there's a members component
+        ...(hasMembers
+          ? {
+              membersHtml: generateMembersPage(),
+            }
+          : {}),
       };
+
+      console.log("Files being sent:", Object.keys(files));
+      console.log("Has members component:", hasMembers);
+      console.log("Members HTML length:", files.membersHtml?.length || 0);
 
       // Check if site is already active
       if (settlement.active) {
@@ -510,6 +538,7 @@ const SettlementPage: React.FC = () => {
     const hasAbout = components.some((c) => c.type === "about");
     const hasContact = components.some((c) => c.type === "contact");
     const hasBlog = components.some((c) => c.type === "blog");
+    const hasMembers = components.some((c) => c.type === "members");
 
     const htmlContent = components
       .map((comp) => {
@@ -523,6 +552,7 @@ const SettlementPage: React.FC = () => {
             // Build navigation links dynamically based on available sections
             const navItems: string[] = [];
             if (hasAbout) navItems.push('<a href="#despre">Despre</a>');
+            if (hasMembers) navItems.push('<a href="#membri">Membrii</a>');
             if (hasBlog) navItems.push('<a href="#noutati">Noutăți</a>');
             if (hasContact) navItems.push('<a href="#contact">Contact</a>');
 
@@ -573,6 +603,21 @@ const SettlementPage: React.FC = () => {
       <div class="layout-container">
         ${servicesTitle ? `<h2>${servicesTitle}</h2>` : ""}
         <p>${comp.content.description || "Lista serviciilor..."}</p>
+      </div>
+    </section>`;
+          case "members":
+            const membersTitle =
+              comp.content.title !== undefined
+                ? comp.content.title
+                : "Echipa Noastră";
+
+            return `    <section class="members ${comp.alignment}" id="membri">
+      <div class="layout-container">
+        ${membersTitle ? `<h2>${membersTitle}</h2>` : ""}
+        <div class="loading-message" id="home-members-loading">Se încarcă membrii...</div>
+        <div class="members-grid" id="members-container" style="display: none;">
+          <!-- Members will be loaded dynamically via API -->
+        </div>
       </div>
     </section>`;
           case "blog":
@@ -640,6 +685,111 @@ ${htmlContent}
   };
 
   // Generate Blog Page HTML
+  const generateMembersPage = () => {
+    return `<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Membrii - ${settlement?.name || "Website"}</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+      /* Additional members page specific styles */
+      body {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+      }
+      
+      .members-page {
+        flex: 1 0 auto;
+        padding: 60px 0;
+      }
+
+      .loading-message {
+        text-align: center;
+        padding: 60px 20px;
+        color: #6b7280;
+        font-size: 18px;
+      }
+
+      .error-message {
+        text-align: center;
+        padding: 60px 20px;
+        color: #ef4444;
+        font-size: 18px;
+      }
+      
+      .members-search-container {
+        margin-bottom: 30px;
+        text-align: center;
+      }
+      
+      .members-search {
+        width: 100%;
+        max-width: 500px;
+        padding: 12px 20px;
+        border: 2px solid #e5e7eb;
+        border-radius: 8px;
+        font-size: 16px;
+        transition: border-color 0.3s;
+      }
+      
+      .members-search:focus {
+        outline: none;
+        border-color: #6366f1;
+      }
+      
+      #all-members {
+        gap: 24px;
+      }
+    </style>
+</head>
+<body>
+    <header class="header center">
+      <div class="layout-container">
+        <h1>Membrii - ${settlement?.name || "Website"}</h1>
+        <nav>
+          <a href="index.html">Acasă</a>
+        </nav>
+      </div>
+    </header>
+
+    <section class="members-page">
+      <div class="layout-container">
+        <div class="members-search-container">
+          <input type="text" id="members-search" class="members-search" placeholder="Caută membri...">
+        </div>
+        
+        <div class="loading-message" id="members-loading-message">
+          Se încarcă membrii...
+        </div>
+
+        <div class="members-grid" id="all-members" style="display: none;">
+          <!-- Members will be loaded dynamically via API -->
+        </div>
+
+        <div class="pagination-container" id="members-pagination-controls" style="display: none;">
+          <button class="pagination-btn" id="members-prev-btn" onclick="changeMembersPage(-1)">← Anterior</button>
+          <div class="pagination-pages" id="members-pagination-pages"></div>
+          <button class="pagination-btn" id="members-next-btn" onclick="changeMembersPage(1)">Următor →</button>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer center">
+      <div class="layout-container">
+        <p>&copy; ${new Date().getFullYear()} ${
+      settlement?.name || "Website"
+    }. Toate drepturile rezervate.</p>
+      </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>`;
+  };
+
   const generateBlogPage = () => {
     return `<!DOCTYPE html>
 <html lang="ro">
@@ -1029,12 +1179,12 @@ body {
     opacity: 0.9;
 }
 
-/* About, Services, Contact, Blog, Map Sections */
-.about, .services, .contact, .blog, .map {
+/* About, Services, Contact, Blog, Members, Map Sections */
+.about, .services, .contact, .blog, .members, .map {
   padding: 60px 0;
 }
 
-.about h2, .services h2, .contact h2, .blog h2, .map h2 {
+.about h2, .services h2, .contact h2, .blog h2, .members h2, .map h2 {
     font-size: 32px;
     margin-bottom: 16px;
     color: #10b981;
@@ -1136,6 +1286,25 @@ body {
     margin: 0;
 }
 
+.members-more {
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+    border-radius: 12px;
+    padding: 32px 24px;
+    text-align: center;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+}
+
+.members-more p {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0;
+}
+
 .btn-view-all {
     display: inline-block;
     padding: 12px 32px;
@@ -1145,6 +1314,10 @@ body {
     border-radius: 8px;
     font-weight: 600;
     transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.members-more .btn-view-all {
+    color: #6366f1;
 }
 
 .btn-view-all:hover {
@@ -1176,6 +1349,168 @@ body {
 .blog-search:focus {
     outline: none;
     border-color: #10b981;
+}
+
+/* Members Section */
+.members-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    margin-top: 32px;
+}
+
+.member-card {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    text-align: center;
+    cursor: pointer;
+}
+
+.member-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.member-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px;
+    font-size: 32px;
+}
+
+.member-card h3 {
+    font-size: 18px;
+    margin-bottom: 4px;
+    color: #1f2937;
+}
+
+.member-position {
+    font-size: 14px;
+    color: #6366f1;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.member-info {
+    font-size: 12px;
+    color: #9ca3af;
+}
+
+/* Member Modal */
+.member-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.member-modal.active {
+    display: flex;
+}
+
+.member-modal-content {
+    background: white;
+    border-radius: 20px;
+    max-width: 600px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    position: relative;
+}
+
+.member-modal-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: #f3f4f6;
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    font-size: 24px;
+    cursor: pointer;
+    z-index: 10;
+}
+
+.member-modal-header {
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+    color: white;
+    padding: 40px;
+    text-align: center;
+}
+
+.member-modal-avatar-large {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+    font-size: 48px;
+}
+
+.member-modal-header h2 {
+    font-size: 28px;
+    margin-bottom: 8px;
+}
+
+.member-modal-header .member-position {
+    color: white;
+    opacity: 0.95;
+    font-size: 16px;
+}
+
+.member-modal-body {
+    padding: 32px;
+}
+
+.member-modal-body h3 {
+    font-size: 18px;
+    color: #1f2937;
+    margin-bottom: 12px;
+}
+
+.member-modal-body p {
+    color: #6b7280;
+    line-height: 1.8;
+}
+
+.member-modal-info-grid {
+    display: grid;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.member-info-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: #f9fafb;
+    border-radius: 8px;
+}
+
+.member-info-item span:first-child {
+    font-size: 20px;
 }
 
 /* Map Section */
@@ -1225,6 +1560,12 @@ body {
 }
 
 /* Responsive */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .members-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
 @media (max-width: 768px) {
   :root {
     --layout-padding: 16px;
@@ -1242,8 +1583,12 @@ body {
     padding: 40px 0;
     }
     
-  .about h2, .services h2, .contact h2, .blog h2, .map h2 {
+.about h2, .services h2, .contact h2, .blog h2, .members h2, .map h2 {
         font-size: 24px;
+    }
+    
+    .members-grid {
+        grid-template-columns: 1fr;
     }
     
     #map {
@@ -1356,6 +1701,7 @@ body {
   // Generate JavaScript code
   const generateJS = () => {
     const hasBlog = components.some((c) => c.type === "blog");
+    const hasMembers = components.some((c) => c.type === "members");
     const hasMap = components.some((c) => c.type === "map");
     const settlementId = settlement?._id || "";
     const lat = settlement?.lat || 45.7489;
@@ -1422,19 +1768,46 @@ document.addEventListener('DOMContentLoaded', function() {
     } else if (homeBlogContainer) {
         // This is index.html - load only first 5 posts
         loadHomeBlogPosts();
-    }`
+    }
+    `
+        : ""
+    }
+    ${
+      hasMembers
+        ? `
+    // Load members on BOTH index.html and members.html
+    const allMembersContainer = document.getElementById('all-members');
+    const homeMembersContainer = document.getElementById('members-container');
+    
+    if (allMembersContainer) {
+        // This is members.html - load ALL members with pagination
+        loadAllMembers();
+    } else if (homeMembersContainer) {
+        // This is index.html - load only first 5 members
+        loadHomeMembers();
+    }
+    `
         : ""
     }
     ${
       hasMap
         ? `
     // Initialize map
-    initMap();`
+    initMap();
+    `
         : ""
     }
     
     console.log('Website loaded successfully!');
 });
+
+// Helper function to escape HTML
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 ${
   hasBlog
     ? `
@@ -1529,13 +1902,6 @@ async function loadBlogPosts() {
         container.innerHTML = '<p style="text-align: center; color: #ef4444; padding: 60px 20px; font-size: 18px;">Eroare la încărcarea postărilor. Vă rugăm să reîncărcați pagina.</p>';
         container.style.display = 'block';
     }
-}
-
-// Helper function to escape HTML
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
 }
 
 // Initialize search functionality
@@ -1688,7 +2054,7 @@ ${
                 : escapeHtml(strippedContent);
             
             return \`
-            <div class="blog-post">
+            <a href="blog.html" class="blog-post" style="text-decoration: none; color: inherit; display: block;">
                 <div class="blog-post-date">\${new Date(post.date).toLocaleDateString('ro-RO', { 
                     year: 'numeric', 
                     month: 'long', 
@@ -1697,7 +2063,7 @@ ${
                 <h3>\${escapedTitle}</h3>
                 <p class="blog-post-description">\${escapedDescription}</p>
                 <div class="blog-post-content">\${truncatedContent}</div>
-            </div>
+            </a>
             \`;
         }).join('');
         
@@ -1721,6 +2087,330 @@ ${
         }
         container.innerHTML = '<p style="text-align: center; color: #ef4444;">Eroare la încărcarea postărilor.</p>';
         container.style.display = 'grid';
+    }
+}
+`
+    : ""
+}
+${
+  hasMembers
+    ? `
+// Members page specific JavaScript (for members.html)
+let currentMembersPage = 1;
+const membersPerPage = 12;
+let allMemberElements = [];
+let filteredMemberElements = [];
+
+async function loadAllMembers() {
+    const container = document.getElementById('all-members');
+    const loadingMessage = document.getElementById('members-loading-message');
+    
+    try {
+        const response = await fetch(\`\${API_URL}/members?settlement=\${SETTLEMENT_ID}\`);
+        
+        if (!response.ok) {
+            throw new Error('Failed to fetch members');
+        }
+        
+        const data = await response.json();
+        const members = data.data.data;
+        
+        // Hide loading message
+        if (loadingMessage) {
+            loadingMessage.style.display = 'none';
+        }
+        
+        if (members.length === 0) {
+            container.innerHTML = '<p style="text-align: center; color: #6b7280; padding: 60px 20px; font-size: 18px;">Nu există membri încă.</p>';
+            container.style.display = 'block';
+            return;
+        }
+        
+        // Sort members alphabetically by last name
+        const sortedMembers = members.sort((a, b) => a.lastName.localeCompare(b.lastName));
+        
+        // Render all members
+        container.innerHTML = sortedMembers.map(member => {
+            const fullName = \`\${member.firstName} \${member.lastName}\`;
+            const birthYear = new Date(member.dateOfBirth).getFullYear();
+            const position = member.position ? \`<div class="member-position">\${escapeHtml(member.position)}</div>\` : '';
+            
+            return \`
+            <div class="member-card" data-member-id="\${member._id}" data-name="\${escapeHtml(fullName.toLowerCase())}" onclick="openMemberModal('\${member._id}')">
+                <div class="member-avatar">👤</div>
+                <h3>\${escapeHtml(fullName)}</h3>
+                \${position}
+                <div class="member-info">📅 Născut \${birthYear}</div>
+            </div>
+            \`;
+        }).join('');
+        
+        container.style.display = 'grid';
+        
+        // Initialize members arrays
+        allMemberElements = Array.from(container.querySelectorAll('.member-card'));
+        filteredMemberElements = [...allMemberElements];
+        
+        // Initialize pagination
+        const paginationControls = document.getElementById('members-pagination-controls');
+        if (paginationControls && allMemberElements.length > membersPerPage) {
+            paginationControls.style.display = 'flex';
+            renderMembersPagination();
+            showMembersPage(1);
+        } else {
+            if (paginationControls) {
+                paginationControls.style.display = 'none';
+            }
+            // If members <= 12, show all
+            allMemberElements.forEach(member => member.style.display = 'block');
+        }
+        
+        // Initialize search
+        initializeMembersSearch();
+        
+    } catch (error) {
+        console.error('Error loading members:', error);
+        if (loadingMessage) {
+            loadingMessage.style.display = 'none';
+        }
+        container.innerHTML = '<p style="text-align: center; color: #ef4444; padding: 60px 20px; font-size: 18px;">Eroare la încărcarea membrilor. Vă rugăm să reîncărcați pagina.</p>';
+        container.style.display = 'block';
+    }
+}
+
+// Initialize members search functionality
+function initializeMembersSearch() {
+    const membersSearch = document.getElementById('members-search');
+    
+    if (membersSearch) {
+        membersSearch.addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            
+            filteredMemberElements = allMemberElements.filter(memberCard => {
+                const name = memberCard.getAttribute('data-name');
+                const position = memberCard.querySelector('.member-position')?.textContent.toLowerCase() || '';
+                
+                return name.includes(searchTerm) || position.includes(searchTerm);
+            });
+            
+            currentMembersPage = 1;
+            
+            // Show/hide pagination based on filtered results
+            const paginationControls = document.getElementById('members-pagination-controls');
+            if (paginationControls) {
+                if (filteredMemberElements.length > membersPerPage) {
+                    paginationControls.style.display = 'flex';
+                    renderMembersPagination();
+                } else {
+                    paginationControls.style.display = 'none';
+                }
+            }
+            
+            showMembersPage(1);
+        });
+    }
+}
+
+function showMembersPage(page) {
+    currentMembersPage = page;
+    const startIndex = (page - 1) * membersPerPage;
+    const endIndex = startIndex + membersPerPage;
+    
+    // Hide all members first
+    allMemberElements.forEach(member => member.style.display = 'none');
+    
+    // Show only members for current page from filtered results
+    filteredMemberElements.forEach((member, index) => {
+        if (index >= startIndex && index < endIndex) {
+            member.style.display = 'block';
+        }
+    });
+    
+    // Update pagination buttons
+    updateMembersPaginationButtons();
+}
+
+function renderMembersPagination() {
+    const totalPages = Math.ceil(filteredMemberElements.length / membersPerPage);
+    const pagesContainer = document.getElementById('members-pagination-pages');
+    pagesContainer.innerHTML = '';
+    
+    for (let i = 1; i <= totalPages; i++) {
+        const pageBtn = document.createElement('button');
+        pageBtn.className = 'pagination-page';
+        pageBtn.textContent = i;
+        pageBtn.onclick = () => showMembersPage(i);
+        
+        if (i === currentMembersPage) {
+            pageBtn.classList.add('active');
+        }
+        
+        pagesContainer.appendChild(pageBtn);
+    }
+}
+
+function updateMembersPaginationButtons() {
+    const totalPages = Math.ceil(filteredMemberElements.length / membersPerPage);
+    const prevBtn = document.getElementById('members-prev-btn');
+    const nextBtn = document.getElementById('members-next-btn');
+    
+    if (prevBtn) {
+        prevBtn.disabled = currentMembersPage === 1;
+    }
+    if (nextBtn) {
+        nextBtn.disabled = currentMembersPage === totalPages;
+    }
+    
+    // Update active page button
+    const pageButtons = document.querySelectorAll('#members-pagination-pages .pagination-page');
+    pageButtons.forEach((btn, index) => {
+        if (index + 1 === currentMembersPage) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+}
+
+function changeMembersPage(direction) {
+    const totalPages = Math.ceil(filteredMemberElements.length / membersPerPage);
+    const newPage = currentMembersPage + direction;
+    
+    if (newPage >= 1 && newPage <= totalPages) {
+        showMembersPage(newPage);
+    }
+}
+
+// Load members for home page
+async function loadHomeMembers() {
+    const container = document.getElementById('members-container');
+    const loadingMessage = document.getElementById('home-members-loading');
+    
+    try {
+        const response = await fetch(\`\${API_URL}/members?settlement=\${SETTLEMENT_ID}\`);
+        
+        if (!response.ok) {
+            throw new Error('Failed to fetch members');
+        }
+        
+        const data = await response.json();
+        const members = data.data.data;
+        
+        // Hide loading message
+        if (loadingMessage) {
+            loadingMessage.style.display = 'none';
+        }
+        
+        if (members.length === 0) {
+            container.innerHTML = '<p style="text-align: center; color: #6b7280;">Nu există membri încă.</p>';
+            container.style.display = 'grid';
+            return;
+        }
+        
+        // Sort members alphabetically by last name and take only first 5
+        const sortedMembers = members.sort((a, b) => a.lastName.localeCompare(b.lastName));
+        const displayedMembers = sortedMembers.slice(0, 5);
+        const remainingCount = members.length - 5;
+        
+        // Render members
+        let membersHTML = displayedMembers.map(member => {
+            const fullName = \`\${member.firstName} \${member.lastName}\`;
+            const birthYear = new Date(member.dateOfBirth).getFullYear();
+            const position = member.position ? \`<div class="member-position">\${escapeHtml(member.position)}</div>\` : '';
+            
+            return \`
+            <a href="members.html" class="member-card" data-member-id="\${member._id}" style="text-decoration: none; color: inherit;">
+                <div class="member-avatar">👤</div>
+                <h3>\${escapeHtml(fullName)}</h3>
+                \${position}
+                <div class="member-info">📅 Născut \${birthYear}</div>
+            </a>
+            \`;
+        }).join('');
+        
+        // Add "view all" link if there are more members
+        if (remainingCount > 0) {
+            membersHTML += \`
+            <div class="members-more">
+                <p>... și încă \${remainingCount} \${remainingCount === 1 ? 'membru' : 'membri'}</p>
+                <a href="members.html" class="btn-view-all">Vezi toți membrii</a>
+            </div>
+            \`;
+        }
+        
+        container.innerHTML = membersHTML;
+        container.style.display = 'grid';
+        
+    } catch (error) {
+        console.error('Error loading members:', error);
+        if (loadingMessage) {
+            loadingMessage.style.display = 'none';
+        }
+        container.innerHTML = '<p style="text-align: center; color: #ef4444;">Eroare la încărcarea membrilor.</p>';
+        container.style.display = 'grid';
+    }
+}
+
+// Open member modal
+async function openMemberModal(memberId) {
+    try {
+        const response = await fetch(\`\${API_URL}/members/\${memberId}\`);
+        if (!response.ok) throw new Error('Failed to fetch member');
+        
+        const data = await response.json();
+        const member = data.data.data;
+        
+        const fullName = \`\${member.firstName} \${member.lastName}\`;
+        const birthDate = new Date(member.dateOfBirth).toLocaleDateString('ro-RO', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+        
+        const position = member.position ? \`<div class="member-position">\${escapeHtml(member.position)}</div>\` : '';
+        const gender = member.gender && member.gender !== 'nespecificat' ? \`<div class="member-info-item"><span>⚧</span><span>\${escapeHtml(member.gender)}</span></div>\` : '';
+        const description = member.description ? \`
+            <h3>Despre</h3>
+            <p>\${escapeHtml(member.description)}</p>
+        \` : '';
+        
+        const modalHTML = \`
+        <div class="member-modal active" id="member-modal" onclick="closeMemberModal(event)">
+            <div class="member-modal-content" onclick="event.stopPropagation()">
+                <button class="member-modal-close" onclick="closeMemberModal()">✕</button>
+                <div class="member-modal-header">
+                    <div class="member-modal-avatar-large">👤</div>
+                    <h2>\${escapeHtml(fullName)}</h2>
+                    \${position}
+                </div>
+                <div class="member-modal-body">
+                    <div class="member-modal-info-grid">
+                        <div class="member-info-item">
+                            <span>📅</span>
+                            <span>Născut: \${birthDate}</span>
+                        </div>
+                        \${gender}
+                    </div>
+                    \${description}
+                </div>
+            </div>
+        </div>
+        \`;
+        
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+        
+    } catch (error) {
+        console.error('Error loading member details:', error);
+        alert('Eroare la încărcarea detaliilor membrului.');
+    }
+}
+
+// Close member modal
+function closeMemberModal(event) {
+    if (event && event.target.id !== 'member-modal') return;
+    const modal = document.getElementById('member-modal');
+    if (modal) {
+        modal.remove();
     }
 }
 `
@@ -1816,6 +2506,7 @@ function initMap() {
     const hasAbout = components.some((c) => c.type === "about");
     const hasContact = components.some((c) => c.type === "contact");
     const hasBlog = components.some((c) => c.type === "blog");
+    const hasMembers = components.some((c) => c.type === "members");
 
     switch (component.type) {
       case "header":
@@ -1827,6 +2518,7 @@ function initMap() {
         // Build dynamic navigation based on existing sections
         const navLabels: string[] = [];
         if (hasAbout) navLabels.push("Despre");
+        if (hasMembers) navLabels.push("Membrii");
         if (hasBlog) navLabels.push("Noutăți");
         if (hasContact) navLabels.push("Contact");
 
@@ -2086,6 +2778,150 @@ function initMap() {
           </section>
         );
 
+      case "members":
+        const previewMembersTitle =
+          component.content.title !== undefined
+            ? component.content.title
+            : "Echipa Noastră";
+
+        return (
+          <section
+            className={`preview-component members ${alignmentClass}`}
+            id="membri"
+          >
+            <div className="layout-container">
+              {previewMembersTitle && <h2>{previewMembersTitle}</h2>}
+              <div
+                className="members-grid"
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
+                  gap: "24px",
+                  marginTop: "24px",
+                }}
+              >
+                {members.length === 0 ? (
+                  <div
+                    style={{
+                      gridColumn: "1 / -1",
+                      background: "#f9fafb",
+                      padding: "40px 20px",
+                      borderRadius: "12px",
+                      textAlign: "center",
+                      border: "2px dashed #d1d5db",
+                    }}
+                  >
+                    <div style={{ fontSize: "48px", marginBottom: "12px" }}>
+                      👥
+                    </div>
+                    <p
+                      style={{
+                        fontSize: "16px",
+                        color: "#6b7280",
+                        fontWeight: "500",
+                      }}
+                    >
+                      Niciun membru încă
+                    </p>
+                    <p
+                      style={{
+                        fontSize: "14px",
+                        color: "#9ca3af",
+                        marginTop: "8px",
+                      }}
+                    >
+                      Adaugă primul membru pentru a-l vedea aici!
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    {members.slice(0, 5).map((member) => (
+                      <div
+                        key={member._id}
+                        style={{
+                          background: "white",
+                          padding: "24px",
+                          borderRadius: "12px",
+                          border: "1px solid #e5e7eb",
+                          boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+                          textAlign: "center",
+                          transition: "all 0.3s ease",
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: "80px",
+                            height: "80px",
+                            borderRadius: "50%",
+                            background:
+                              "linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            margin: "0 auto 16px",
+                            fontSize: "32px",
+                          }}
+                        >
+                          👤
+                        </div>
+                        <h4
+                          style={{
+                            marginBottom: "4px",
+                            fontSize: "18px",
+                            color: "#1f2937",
+                            fontWeight: "700",
+                          }}
+                        >
+                          {member.firstName} {member.lastName}
+                        </h4>
+                        {member.position && (
+                          <p
+                            style={{
+                              fontSize: "14px",
+                              color: "#6366f1",
+                              fontWeight: "600",
+                              marginBottom: "8px",
+                            }}
+                          >
+                            {member.position}
+                          </p>
+                        )}
+                        <p
+                          style={{
+                            fontSize: "12px",
+                            color: "#9ca3af",
+                          }}
+                        >
+                          📅{" "}
+                          {new Date(member.dateOfBirth).toLocaleDateString(
+                            "ro-RO",
+                            {
+                              year: "numeric",
+                            }
+                          )}
+                        </p>
+                      </div>
+                    ))}
+                    {members.length > 5 && (
+                      <div
+                        style={{
+                          textAlign: "center",
+                          padding: "20px",
+                          color: "#6b7280",
+                          fontSize: "16px",
+                          fontStyle: "italic",
+                        }}
+                      >
+                        ... și încă {members.length - 5} membri
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          </section>
+        );
+
       case "map":
         // Match the generated HTML logic
         const previewMapTitle =
@@ -2231,6 +3067,9 @@ function initMap() {
             </Link>
             <Link to={`/settlement/${id}/blog`} className="btn-blog">
               📰 Gestionează Blog
+            </Link>
+            <Link to={`/settlement/${id}/members`} className="btn-members">
+              👥 Gestionează Membrii
             </Link>
             {components.length > 0 && (
               <>

@@ -36,6 +36,17 @@ export interface BlogPost {
   date: Date;
 }
 
+export interface Member {
+  _id: string;
+  firstName: string;
+  lastName: string;
+  dateOfBirth: Date;
+  description?: string;
+  gender?: string;
+  position?: string;
+  settlement: string;
+}
+
 export interface WebsiteComponent {
   id: string;
   type:

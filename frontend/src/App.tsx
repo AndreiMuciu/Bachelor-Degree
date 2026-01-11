@@ -14,6 +14,8 @@ import AboutPage from "./pages/AboutPage";
 import HelpPage from "./pages/HelpPage";
 import FAQPage from "./pages/FAQPage";
 import BlogManagementPage from "./pages/BlogManagementPage";
+import MembersManagementPage from "./pages/MembersManagementPage";
+import MembersPage from "./pages/MembersPage";
 import "./App.css";
 
 function AppRoutes() {
@@ -66,6 +68,26 @@ function AppRoutes() {
           <ProtectedRoute>
             <Layout>
               <BlogManagementPage />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/settlement/:settlementId/members"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <MembersManagementPage />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/settlement/:settlementId/members-preview"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <MembersPage />
             </Layout>
           </ProtectedRoute>
         }

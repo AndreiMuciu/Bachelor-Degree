@@ -90,6 +90,33 @@
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
+.btn-members {
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  color: white;
+  border: none;
+  padding: 0 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 38px;
+  line-height: 38px;
+  box-sizing: border-box;
+  vertical-align: top;
+  font-family: inherit;
+  margin: 0;
+}
+
+.btn-members:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
 .btn-save {
   background: #10b981;
   color: white;
@@ -1074,4 +1101,3 @@ textarea:focus {
 .error-container .btn-primary:hover {
   background: #059669;
 }
-
