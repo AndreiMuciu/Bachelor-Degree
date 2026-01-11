@@ -55,7 +55,7 @@ const MembersManagementPage: React.FC = () => {
       const dataToSubmit = {
         firstName: formData.firstName,
         lastName: formData.lastName,
-        dateOfBirth: formData.dateOfBirth,
+        dateOfBirth: new Date(formData.dateOfBirth),
         description: formData.description,
         gender: formData.gender,
         position: formData.position,

@@ -57,7 +57,8 @@ export interface WebsiteComponent {
     | "contact"
     | "footer"
     | "blog"
-    | "map";
+    | "map"
+    | "members";
   content: {
     title?: string;
     subtitle?: string;
