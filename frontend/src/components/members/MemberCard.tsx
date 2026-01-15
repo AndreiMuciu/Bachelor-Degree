@@ -25,7 +25,6 @@ const MemberCard: React.FC<MemberCardProps> = ({
         <div className="member-avatar-placeholder">
           <span>👤</span>
         </div>
-        <div className="member-badge">Activ</div>
       </div>
       <h3>{fullName}</h3>
       {member.position && <p className="member-position">{member.position}</p>}

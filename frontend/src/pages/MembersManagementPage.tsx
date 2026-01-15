@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { memberAPI } from "../services/api";
 import type { Member } from "../types";
 import MemberHeader from "../components/members/MemberHeader";
@@ -11,6 +11,7 @@ import "../styles/MembersManagement.css";
 
 const MembersManagementPage: React.FC = () => {
   const { settlementId } = useParams<{ settlementId: string }>();
+  const navigate = useNavigate();
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -150,96 +151,107 @@ const MembersManagementPage: React.FC = () => {
   };
 
   return (
-    <div className="members-management-container">
-      <MemberHeader
-        membersCount={members.length}
-        onCreateNew={() => setShowModal(true)}
-      />
+    <>
+      <div className="back-button-wrapper">
+        <button
+          className="back-button"
+          onClick={() => navigate(`/settlement/${settlementId}`)}
+        >
+          ← Înapoi la Settlement
+        </button>
+      </div>
 
-      {members.length > 0 && (
-        <MemberSearchBox
-          searchQuery={searchQuery}
-          onSearchChange={handleSearchChange}
-          resultsCount={filteredMembers.length}
+      <div className="members-management-container">
+        <MemberHeader
+          membersCount={members.length}
+          onCreateNew={() => setShowModal(true)}
         />
-      )}
 
-      {members.length === 0 ? (
-        <EmptyState
-          icon="👥"
-          title="Echipa ta așteaptă"
-          description="Adaugă primul membru și începe să construiești echipa!"
-          actionButton={{
-            text: "Adaugă Primul Membru",
-            onClick: () => setShowModal(true),
-          }}
-        />
-      ) : filteredMembers.length === 0 ? (
-        <EmptyState
-          icon="🔍"
-          title="Niciun membru găsit"
-          description="Încearcă alt termen de căutare"
-          actionButton={{
-            text: "Resetează căutarea",
-            onClick: () => setSearchQuery(""),
-          }}
-        />
-      ) : (
-        <>
-          <MembersGrid
-            members={currentMembers}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
+        {members.length > 0 && (
+          <MemberSearchBox
+            searchQuery={searchQuery}
+            onSearchChange={handleSearchChange}
+            resultsCount={filteredMembers.length}
           />
+        )}
 
-          {totalPages > 1 && (
-            <div className="pagination-container">
-              <button
-                className="pagination-btn"
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 1}
-              >
-                ← Anterior
-              </button>
+        {members.length === 0 ? (
+          <EmptyState
+            icon="👥"
+            title="Echipa ta așteaptă"
+            description="Adaugă primul membru și începe să construiești echipa!"
+            actionButton={{
+              text: "Adaugă Primul Membru",
+              onClick: () => setShowModal(true),
+            }}
+          />
+        ) : filteredMembers.length === 0 ? (
+          <EmptyState
+            icon="🔍"
+            title="Niciun membru găsit"
+            description="Încearcă alt termen de căutare"
+            actionButton={{
+              text: "Resetează căutarea",
+              onClick: () => setSearchQuery(""),
+            }}
+          />
+        ) : (
+          <>
+            <MembersGrid
+              members={currentMembers}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+            />
 
-              <div className="pagination-pages">
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                  (page) => (
-                    <button
-                      key={page}
-                      className={`pagination-page ${
-                        currentPage === page ? "active" : ""
-                      }`}
-                      onClick={() => handlePageChange(page)}
-                    >
-                      {page}
-                    </button>
-                  )
-                )}
+            {totalPages > 1 && (
+              <div className="pagination-container">
+                <button
+                  className="pagination-btn"
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                >
+                  ← Anterior
+                </button>
+
+                <div className="pagination-pages">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                    (page) => (
+                      <button
+                        key={page}
+                        className={`pagination-page ${
+                          currentPage === page ? "active" : ""
+                        }`}
+                        onClick={() => handlePageChange(page)}
+                      >
+                        {page}
+                      </button>
+                    )
+                  )}
+                </div>
+
+                <button
+                  className="pagination-btn"
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                >
+                  Următor →
+                </button>
               </div>
+            )}
+          </>
+        )}
 
-              <button
-                className="pagination-btn"
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage === totalPages}
-              >
-                Următor →
-              </button>
-            </div>
-          )}
-        </>
-      )}
-
-      {showModal && (
-        <MemberModal
-          isEditing={!!editingMember}
-          formData={formData}
-          onFormDataChange={(data) => setFormData(data)}
-          onSubmit={handleSubmit}
-          onClose={handleCloseModal}
-        />
-      )}
-    </div>
+        {showModal && (
+          <MemberModal
+            isEditing={!!editingMember}
+            formData={formData}
+            onFormDataChange={(data) => setFormData(data)}
+            onSubmit={handleSubmit}
+            onClose={handleCloseModal}
+          />
+        )}
+      </div>
+    </>
   );
 };
 

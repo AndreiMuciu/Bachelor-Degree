@@ -262,10 +262,34 @@ const SettlementPage: React.FC = () => {
     if (!id) return;
     try {
       const membersData = await memberAPI.getBySettlement(id);
-      // Sort members alphabetically by last name
-      const sortedMembers = membersData.sort((a, b) =>
-        a.lastName.localeCompare(b.lastName)
-      );
+
+      // Define position hierarchy
+      const positionOrder: { [key: string]: number } = {
+        președinte: 1,
+        presedinte: 1,
+        "vice-președinte": 2,
+        "vice-presedinte": 2,
+        vicepreședinte: 2,
+        vicepresedinte: 2,
+        consilier: 3,
+        membru: 4,
+      };
+
+      // Sort members by position hierarchy, then alphabetically
+      const sortedMembers = membersData.sort((a, b) => {
+        const posA = (a.position?.toLowerCase() || "").trim();
+        const posB = (b.position?.toLowerCase() || "").trim();
+
+        const orderA = positionOrder[posA] || 999;
+        const orderB = positionOrder[posB] || 999;
+
+        // If same order level, sort alphabetically by last name
+        if (orderA === orderB) {
+          return a.lastName.localeCompare(b.lastName);
+        }
+
+        return orderA - orderB;
+      });
       setMembers(sortedMembers);
     } catch (error) {
       console.error("Error fetching members:", error);
@@ -847,8 +871,8 @@ ${htmlContent}
 
     <section class="blog-page">
       <div class="layout-container">
-        <div class="blog-search-container">
-          <input type="text" id="blog-search" class="blog-search" placeholder="Caută în postări...">
+        <div class="blog-search-container" style="margin-bottom: 30px; text-align: center;">
+          <input type="text" id="blog-search" class="blog-search" placeholder="Caută în postări..." style="width: 100%; max-width: 500px; padding: 12px 20px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 16px;">
         </div>
         
         <div class="loading-message" id="loading-message">
@@ -2126,8 +2150,33 @@ async function loadAllMembers() {
             return;
         }
         
-        // Sort members alphabetically by last name
-        const sortedMembers = members.sort((a, b) => a.lastName.localeCompare(b.lastName));
+        // Define position hierarchy
+        const positionOrder = {
+            'președinte': 1,
+            'presedinte': 1,
+            'vice-președinte': 2,
+            'vice-presedinte': 2,
+            'vicepreședinte': 2,
+            'vicepresedinte': 2,
+            'consilier': 3,
+            'membru': 4
+        };
+        
+        // Sort members by position hierarchy, then alphabetically
+        const sortedMembers = members.sort((a, b) => {
+            const posA = (a.position?.toLowerCase() || '').trim();
+            const posB = (b.position?.toLowerCase() || '').trim();
+            
+            const orderA = positionOrder[posA] || 999;
+            const orderB = positionOrder[posB] || 999;
+            
+            // If same order level, sort alphabetically by last name
+            if (orderA === orderB) {
+                return a.lastName.localeCompare(b.lastName);
+            }
+            
+            return orderA - orderB;
+        });
         
         // Render all members
         container.innerHTML = sortedMembers.map(member => {
@@ -2307,8 +2356,33 @@ async function loadHomeMembers() {
             return;
         }
         
-        // Sort members alphabetically by last name and take only first 5
-        const sortedMembers = members.sort((a, b) => a.lastName.localeCompare(b.lastName));
+        // Define position hierarchy
+        const positionOrder = {
+            'președinte': 1,
+            'presedinte': 1,
+            'vice-președinte': 2,
+            'vice-presedinte': 2,
+            'vicepreședinte': 2,
+            'vicepresedinte': 2,
+            'consilier': 3,
+            'membru': 4
+        };
+        
+        // Sort members by position hierarchy, then alphabetically and take only first 5
+        const sortedMembers = members.sort((a, b) => {
+            const posA = (a.position?.toLowerCase() || '').trim();
+            const posB = (b.position?.toLowerCase() || '').trim();
+            
+            const orderA = positionOrder[posA] || 999;
+            const orderB = positionOrder[posB] || 999;
+            
+            // If same order level, sort alphabetically by last name
+            if (orderA === orderB) {
+                return a.lastName.localeCompare(b.lastName);
+            }
+            
+            return orderA - orderB;
+        });
         const displayedMembers = sortedMembers.slice(0, 5);
         const remainingCount = members.length - 5;
         

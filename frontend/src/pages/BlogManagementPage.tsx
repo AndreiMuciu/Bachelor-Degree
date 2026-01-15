@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { blogPostAPI } from "../services/api";
 import type { BlogPost } from "../types";
 import BlogHeader from "../components/blog/BlogHeader";
@@ -11,6 +11,7 @@ import "../styles/BlogManagement.css";
 
 const BlogManagementPage: React.FC = () => {
   const { settlementId } = useParams<{ settlementId: string }>();
+  const navigate = useNavigate();
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -123,96 +124,107 @@ const BlogManagementPage: React.FC = () => {
   };
 
   return (
-    <div className="blog-management-container">
-      <BlogHeader
-        postsCount={posts.length}
-        onCreateNew={() => setShowModal(true)}
-      />
+    <>
+      <div className="back-button-wrapper">
+        <button
+          className="back-button"
+          onClick={() => navigate(`/settlement/${settlementId}`)}
+        >
+          ← Înapoi la Settlement
+        </button>
+      </div>
 
-      {posts.length > 0 && (
-        <BlogSearchBox
-          searchQuery={searchQuery}
-          onSearchChange={handleSearchChange}
-          resultsCount={filteredPosts.length}
+      <div className="blog-management-container">
+        <BlogHeader
+          postsCount={posts.length}
+          onCreateNew={() => setShowModal(true)}
         />
-      )}
 
-      {posts.length === 0 ? (
-        <EmptyState
-          icon="✨"
-          title="Blogul tău așteaptă"
-          description="Creează prima postare și începe să împărtășești povești!"
-          actionButton={{
-            text: "Creează Prima Postare",
-            onClick: () => setShowModal(true),
-          }}
-        />
-      ) : filteredPosts.length === 0 ? (
-        <EmptyState
-          icon="🔍"
-          title="Nicio postare găsită"
-          description="Încearcă alt termen de căutare"
-          actionButton={{
-            text: "Resetează căutarea",
-            onClick: () => setSearchQuery(""),
-          }}
-        />
-      ) : (
-        <>
-          <BlogPostsGrid
-            posts={currentPosts}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
+        {posts.length > 0 && (
+          <BlogSearchBox
+            searchQuery={searchQuery}
+            onSearchChange={handleSearchChange}
+            resultsCount={filteredPosts.length}
           />
+        )}
 
-          {totalPages > 1 && (
-            <div className="pagination-container">
-              <button
-                className="pagination-btn"
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 1}
-              >
-                ← Anterior
-              </button>
+        {posts.length === 0 ? (
+          <EmptyState
+            icon="✨"
+            title="Blogul tău așteaptă"
+            description="Creează prima postare și începe să împărtășești povești!"
+            actionButton={{
+              text: "Creează Prima Postare",
+              onClick: () => setShowModal(true),
+            }}
+          />
+        ) : filteredPosts.length === 0 ? (
+          <EmptyState
+            icon="🔍"
+            title="Nicio postare găsită"
+            description="Încearcă alt termen de căutare"
+            actionButton={{
+              text: "Resetează căutarea",
+              onClick: () => setSearchQuery(""),
+            }}
+          />
+        ) : (
+          <>
+            <BlogPostsGrid
+              posts={currentPosts}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+            />
 
-              <div className="pagination-pages">
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                  (page) => (
-                    <button
-                      key={page}
-                      className={`pagination-page ${
-                        currentPage === page ? "active" : ""
-                      }`}
-                      onClick={() => handlePageChange(page)}
-                    >
-                      {page}
-                    </button>
-                  )
-                )}
+            {totalPages > 1 && (
+              <div className="pagination-container">
+                <button
+                  className="pagination-btn"
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                >
+                  ← Anterior
+                </button>
+
+                <div className="pagination-pages">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                    (page) => (
+                      <button
+                        key={page}
+                        className={`pagination-page ${
+                          currentPage === page ? "active" : ""
+                        }`}
+                        onClick={() => handlePageChange(page)}
+                      >
+                        {page}
+                      </button>
+                    )
+                  )}
+                </div>
+
+                <button
+                  className="pagination-btn"
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                >
+                  Următor →
+                </button>
               </div>
+            )}
+          </>
+        )}
 
-              <button
-                className="pagination-btn"
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage === totalPages}
-              >
-                Următor →
-              </button>
-            </div>
-          )}
-        </>
-      )}
-
-      {showModal && (
-        <BlogPostModal
-          isEditing={editingPost !== null}
-          formData={formData}
-          onFormDataChange={setFormData}
-          onSubmit={handleSubmit}
-          onClose={handleCloseModal}
-        />
-      )}
-    </div>
+        {showModal && (
+          <BlogPostModal
+            isEditing={editingPost !== null}
+            formData={formData}
+            onFormDataChange={setFormData}
+            onSubmit={handleSubmit}
+            onClose={handleCloseModal}
+          />
+        )}
+      </div>
+    </>
   );
 };
 

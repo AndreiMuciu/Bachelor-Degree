@@ -18,9 +18,35 @@ const MembersPage: React.FC = () => {
     if (!settlementId) return;
     try {
       const data = await memberAPI.getBySettlement(settlementId);
-      // Sort members alphabetically by last name and limit to 5
+
+      // Define position hierarchy
+      const positionOrder: { [key: string]: number } = {
+        președinte: 1,
+        presedinte: 1,
+        "vice-președinte": 2,
+        "vice-presedinte": 2,
+        vicepreședinte: 2,
+        vicepresedinte: 2,
+        consilier: 3,
+        membru: 4,
+      };
+
+      // Sort members by position hierarchy, then alphabetically
       const sortedMembers = data
-        .sort((a, b) => a.lastName.localeCompare(b.lastName))
+        .sort((a, b) => {
+          const posA = (a.position?.toLowerCase() || "").trim();
+          const posB = (b.position?.toLowerCase() || "").trim();
+
+          const orderA = positionOrder[posA] || 999;
+          const orderB = positionOrder[posB] || 999;
+
+          // If same order level, sort alphabetically by last name
+          if (orderA === orderB) {
+            return a.lastName.localeCompare(b.lastName);
+          }
+
+          return orderA - orderB;
+        })
         .slice(0, 5);
       setMembers(sortedMembers);
     } catch (error) {
