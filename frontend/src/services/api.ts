@@ -64,7 +64,7 @@ export const authAPI = {
 export const settlementAPI = {
   getAll: async (): Promise<Settlement[]> => {
     const response = await api.get<{ data: { data: Settlement[] } }>(
-      "/settlements"
+      "/settlements",
     );
     return response.data.data.data;
   },
@@ -72,7 +72,7 @@ export const settlementAPI = {
   getById: async (id: string): Promise<Settlement> => {
     console.log("API - Fetching settlement:", id);
     const response = await api.get<{ data: { data: Settlement } }>(
-      `/settlements/${id}`
+      `/settlements/${id}`,
     );
     console.log("API - Full response:", response);
     console.log("API - Response data:", response.data);
@@ -81,11 +81,11 @@ export const settlementAPI = {
 
   update: async (
     id: string,
-    data: Partial<Settlement>
+    data: Partial<Settlement>,
   ): Promise<Settlement> => {
     const response = await api.patch<{ data: { data: Settlement } }>(
       `/settlements/${id}`,
-      data
+      data,
     );
     return response.data.data.data;
   },
@@ -95,21 +95,21 @@ export const settlementAPI = {
 export const blogPostAPI = {
   getAll: async (): Promise<BlogPost[]> => {
     const response = await api.get<{ data: { data: BlogPost[] } }>(
-      "/blog-posts"
+      "/blog-posts",
     );
     return response.data.data.data;
   },
 
   getBySettlement: async (settlementId: string): Promise<BlogPost[]> => {
     const response = await api.get<{ data: { data: BlogPost[] } }>(
-      `/blog-posts?settlement=${settlementId}`
+      `/blog-posts?settlement=${settlementId}`,
     );
     return response.data.data.data;
   },
 
   getById: async (id: string): Promise<BlogPost> => {
     const response = await api.get<{ data: { data: BlogPost } }>(
-      `/blog-posts/${id}`
+      `/blog-posts/${id}`,
     );
     return response.data.data.data;
   },
@@ -117,7 +117,7 @@ export const blogPostAPI = {
   create: async (data: Partial<BlogPost>): Promise<BlogPost> => {
     const response = await api.post<{ data: { data: BlogPost } }>(
       "/blog-posts",
-      data
+      data,
     );
     return response.data.data.data;
   },
@@ -125,7 +125,7 @@ export const blogPostAPI = {
   update: async (id: string, data: Partial<BlogPost>): Promise<BlogPost> => {
     const response = await api.patch<{ data: { data: BlogPost } }>(
       `/blog-posts/${id}`,
-      data
+      data,
     );
     return response.data.data.data;
   },
@@ -144,14 +144,14 @@ export const memberAPI = {
 
   getBySettlement: async (settlementId: string): Promise<Member[]> => {
     const response = await api.get<{ data: { data: Member[] } }>(
-      `/members?settlement=${settlementId}`
+      `/members?settlement=${settlementId}`,
     );
     return response.data.data.data;
   },
 
   getById: async (id: string): Promise<Member> => {
     const response = await api.get<{ data: { data: Member } }>(
-      `/members/${id}`
+      `/members/${id}`,
     );
     return response.data.data.data;
   },
@@ -159,7 +159,7 @@ export const memberAPI = {
   create: async (data: Partial<Member>): Promise<Member> => {
     const response = await api.post<{ data: { data: Member } }>(
       "/members",
-      data
+      data,
     );
     return response.data.data.data;
   },
@@ -167,7 +167,7 @@ export const memberAPI = {
   update: async (id: string, data: Partial<Member>): Promise<Member> => {
     const response = await api.patch<{ data: { data: Member } }>(
       `/members/${id}`,
-      data
+      data,
     );
     return response.data.data.data;
   },
@@ -188,7 +188,7 @@ export const n8nAPI = {
       blogHtml?: string;
       postHtml?: string;
       membersHtml?: string;
-    }
+    },
   ): Promise<{ status: string; message: string; data: any }> => {
     const response = await api.post("/n8n/create-site", {
       settlementId,
@@ -206,13 +206,78 @@ export const n8nAPI = {
       blogHtml?: string;
       postHtml?: string;
       membersHtml?: string;
-    }
+    },
   ): Promise<{ status: string; message: string; data: any }> => {
     const response = await api.post("/n8n/update-site", {
       settlementId,
       files,
     });
     return response.data;
+  },
+};
+
+// Admin endpoints
+export const adminAPI = {
+  // User management
+  getAllUsers: async (): Promise<User[]> => {
+    const response = await api.get<{ data: { data: User[] } }>("/users");
+    return response.data.data.data;
+  },
+
+  createUser: async (userData: {
+    email: string;
+    password: string;
+    role?: string;
+  }): Promise<User> => {
+    const response = await api.post<{ data: { data: User } }>("/users", {
+      ...userData,
+      role: "user", // Force role to be 'user' only
+    });
+    return response.data.data.data;
+  },
+
+  updateUser: async (
+    userId: string,
+    userData: { settlements?: string[] },
+  ): Promise<User> => {
+    const response = await api.patch<{ data: { data: User } }>(
+      `/users/${userId}`,
+      userData,
+    );
+    return response.data.data.data;
+  },
+
+  deleteUser: async (userId: string): Promise<void> => {
+    await api.delete(`/users/${userId}`);
+  },
+
+  // Settlement management
+  createSettlement: async (settlementData: {
+    name: string;
+    judet: string;
+    lat: number;
+    lng: number;
+  }): Promise<Settlement> => {
+    const response = await api.post<{ data: { data: Settlement } }>(
+      "/settlements",
+      settlementData,
+    );
+    return response.data.data.data;
+  },
+
+  updateSettlement: async (
+    settlementId: string,
+    settlementData: Partial<Settlement>,
+  ): Promise<Settlement> => {
+    const response = await api.patch<{ data: { data: Settlement } }>(
+      `/settlements/${settlementId}`,
+      settlementData,
+    );
+    return response.data.data.data;
+  },
+
+  deleteSettlement: async (settlementId: string): Promise<void> => {
+    await api.delete(`/settlements/${settlementId}`);
   },
 };
 

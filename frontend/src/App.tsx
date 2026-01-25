@@ -16,6 +16,7 @@ import FAQPage from "./pages/FAQPage";
 import BlogManagementPage from "./pages/BlogManagementPage";
 import MembersManagementPage from "./pages/MembersManagementPage";
 import MembersPage from "./pages/MembersPage";
+import AdminPage from "./pages/AdminPage";
 import "./App.css";
 
 function AppRoutes() {
@@ -118,6 +119,16 @@ function AppRoutes() {
           <ProtectedRoute>
             <Layout>
               <FAQPage />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <AdminPage />
             </Layout>
           </ProtectedRoute>
         }
