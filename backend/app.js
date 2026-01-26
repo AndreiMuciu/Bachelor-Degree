@@ -11,6 +11,7 @@ import settlementRouter from "./routes/settlementRoutes.js";
 import authRouter from "./routes/authRoutes.js";
 import n8nRouter from "./routes/n8nRoutes.js";
 import memberRouter from "./routes/memberRoutes.js";
+import coordinatesRouter from "./routes/coordinatesRoutes.js";
 import passport from "passport";
 
 const app = express();
@@ -20,7 +21,7 @@ const corsOptions = {
     // Permite domeniul principal și toate subdomeniile
     const allowedDomain = process.env.PRODUCTION_URL.replace(
       /^https?:\/\//,
-      ""
+      "",
     );
 
     if (
@@ -111,6 +112,7 @@ const CODE_KEYS = new Set([
   "styles.css",
   "blog.html",
   "post.html",
+  "membershtml",
 ]);
 
 const cleanObject = (data, parentKey = null) => {
@@ -161,6 +163,7 @@ app.use("/api/v1/blog-posts", blogPostRouter);
 app.use("/api/v1/settlements", settlementRouter);
 app.use("/api/v1/n8n", n8nRouter);
 app.use("/api/v1/members", memberRouter);
+app.use("/api/v1/coordinates", coordinatesRouter);
 
 app.get("/health", (req, res) => {
   res.status(200).send("Server is healthy");
