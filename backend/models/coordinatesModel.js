@@ -1,6 +1,19 @@
 import mongoose from "mongoose";
 
 const coordinatesSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: [true, "Coordinates must have a name"],
+    trim: true,
+    maxlength: [
+      100,
+      "Coordinates name must have less than or equal to 100 characters",
+    ],
+    minlength: [
+      1,
+      "Coordinates name must have more than or equal to 1 character",
+    ],
+  },
   latitude: {
     type: Number,
     required: [true, "Coordinates must have a latitude"],
