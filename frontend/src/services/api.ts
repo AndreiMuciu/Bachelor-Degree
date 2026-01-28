@@ -6,6 +6,7 @@ import type {
   Settlement,
   BlogPost,
   Member,
+  Coordinate,
 } from "../types";
 
 const API_BASE_URL = "https://api.bachelordegree.tech/api/v1";
@@ -174,6 +175,53 @@ export const memberAPI = {
 
   delete: async (id: string): Promise<void> => {
     await api.delete(`/members/${id}`);
+  },
+};
+
+// Coordinates endpoints
+export const coordinatesAPI = {
+  getAll: async (): Promise<Coordinate[]> => {
+    const response = await api.get<{ data: { data: Coordinate[] } }>(
+      "/coordinates",
+    );
+    return response.data.data.data;
+  },
+
+  getBySettlement: async (settlementId: string): Promise<Coordinate[]> => {
+    const response = await api.get<{ data: { data: Coordinate[] } }>(
+      `/coordinates?settlement=${settlementId}`,
+    );
+    return response.data.data.data;
+  },
+
+  getById: async (id: string): Promise<Coordinate> => {
+    const response = await api.get<{ data: { data: Coordinate } }>(
+      `/coordinates/${id}`,
+    );
+    return response.data.data.data;
+  },
+
+  create: async (data: Partial<Coordinate>): Promise<Coordinate> => {
+    const response = await api.post<{ data: { data: Coordinate } }>(
+      "/coordinates",
+      data,
+    );
+    return response.data.data.data;
+  },
+
+  update: async (
+    id: string,
+    data: Partial<Coordinate>,
+  ): Promise<Coordinate> => {
+    const response = await api.patch<{ data: { data: Coordinate } }>(
+      `/coordinates/${id}`,
+      data,
+    );
+    return response.data.data.data;
+  },
+
+  delete: async (id: string): Promise<void> => {
+    await api.delete(`/coordinates/${id}`);
   },
 };
 

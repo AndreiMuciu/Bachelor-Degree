@@ -1,10 +1,28 @@
 import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import {
+  MapContainer,
+  TileLayer,
+  Marker,
+  Popup,
+  useMapEvents,
+} from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-import { settlementAPI, blogPostAPI, memberAPI, n8nAPI } from "../services/api";
-import type { Settlement, WebsiteComponent, BlogPost, Member } from "../types";
+import {
+  settlementAPI,
+  blogPostAPI,
+  memberAPI,
+  n8nAPI,
+  coordinatesAPI,
+} from "../services/api";
+import type {
+  Settlement,
+  WebsiteComponent,
+  BlogPost,
+  Member,
+  Coordinate,
+} from "../types";
 import "../styles/Settlement.css";
 
 // Fix pentru iconițele Leaflet
@@ -19,6 +37,54 @@ let DefaultIcon = L.icon({
 });
 
 L.Marker.prototype.options.icon = DefaultIcon;
+
+// Creare iconiță personalizată frumoasă pentru coordonate
+const createCustomIcon = () => {
+  return L.divIcon({
+    html: `
+      <div style="
+        width: 32px;
+        height: 32px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: 3px solid white;
+        border-radius: 50% 50% 50% 0;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        transform: rotate(-45deg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      ">
+        <span style="
+          transform: rotate(45deg);
+          font-size: 16px;
+          color: white;
+        ">📍</span>
+      </div>
+    `,
+    className: "custom-marker",
+    iconSize: [32, 32],
+    iconAnchor: [16, 32],
+    popupAnchor: [0, -32],
+  });
+};
+
+// Component for handling map clicks
+function MapClickHandler({
+  onClick,
+  enabled,
+}: {
+  onClick: (lat: number, lng: number) => void;
+  enabled: boolean;
+}) {
+  useMapEvents({
+    click: (e) => {
+      if (enabled) {
+        onClick(e.latlng.lat, e.latlng.lng);
+      }
+    },
+  });
+  return null;
+}
 
 const defaultComponents: WebsiteComponent[] = [
   {
@@ -74,11 +140,23 @@ const SettlementPage: React.FC = () => {
   >("desktop");
   const [showCodeModal, setShowCodeModal] = useState(false);
   const [activeCodeTab, setActiveCodeTab] = useState<"html" | "css" | "js">(
-    "html"
+    "html",
   );
   const [showBlogModal, setShowBlogModal] = useState(false);
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
+  const [coordinates, setCoordinates] = useState<Coordinate[]>([]);
+  const [isAddingCoordinate, setIsAddingCoordinate] = useState(false);
+  const [tempCoordinate, setTempCoordinate] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
+  const [showCoordinateForm, setShowCoordinateForm] = useState(false);
+  const [coordinateFormData, setCoordinateFormData] = useState({
+    name: "",
+    latitude: 0,
+    longitude: 0,
+  });
   const [blogFormData, setBlogFormData] = useState({
     title: "",
     description: "",
@@ -119,7 +197,7 @@ const SettlementPage: React.FC = () => {
   const saveToCache = (
     settlementId: string,
     componentsData: WebsiteComponent[],
-    cssData: string
+    cssData: string,
   ) => {
     try {
       const data = {
@@ -146,7 +224,7 @@ const SettlementPage: React.FC = () => {
   // Show notification function
   const showNotification = (
     message: string,
-    type: "success" | "error" | "info" = "success"
+    type: "success" | "error" | "info" = "success",
   ) => {
     setNotification({ show: true, message, type });
     setTimeout(() => {
@@ -174,7 +252,7 @@ const SettlementPage: React.FC = () => {
           setCustomCSS(cached.customCSS);
           showNotification(
             "📦 Progresul anterior a fost restaurat din cache!",
-            "info"
+            "info",
           );
         }
 
@@ -184,6 +262,7 @@ const SettlementPage: React.FC = () => {
         // Fetch blog posts for this settlement
         await fetchBlogPosts();
         await fetchMembers();
+        await fetchCoordinates();
       } catch (error) {
         console.error("Error fetching settlement:", error);
         setIsInitialized(true);
@@ -250,7 +329,7 @@ const SettlementPage: React.FC = () => {
       const posts = await blogPostAPI.getBySettlement(id);
       // Sort posts by date (newest first)
       const sortedPosts = posts.sort(
-        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
       );
       setBlogPosts(sortedPosts);
     } catch (error) {
@@ -293,6 +372,62 @@ const SettlementPage: React.FC = () => {
       setMembers(sortedMembers);
     } catch (error) {
       console.error("Error fetching members:", error);
+    }
+  };
+
+  const fetchCoordinates = async () => {
+    if (!id) return;
+    try {
+      const coordinatesData = await coordinatesAPI.getBySettlement(id);
+      setCoordinates(coordinatesData);
+    } catch (error) {
+      console.error("Error fetching coordinates:", error);
+    }
+  };
+
+  const handleMapClick = (lat: number, lng: number) => {
+    if (!isAddingCoordinate) return;
+
+    setTempCoordinate({ lat, lng });
+    setCoordinateFormData({
+      name: "",
+      latitude: lat,
+      longitude: lng,
+    });
+    setShowCoordinateForm(true);
+  };
+
+  const handleCreateCoordinate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!id) return;
+
+    try {
+      await coordinatesAPI.create({
+        ...coordinateFormData,
+        settlement: id,
+      });
+      await fetchCoordinates();
+      setShowCoordinateForm(false);
+      setCoordinateFormData({ name: "", latitude: 0, longitude: 0 });
+      setTempCoordinate(null);
+      setIsAddingCoordinate(false);
+      showNotification("✅ Punct adăugat cu succes!", "success");
+    } catch (error) {
+      console.error("Error creating coordinate:", error);
+      showNotification("❌ Eroare la adăugarea punctului!", "error");
+    }
+  };
+
+  const handleDeleteCoordinate = async (coordId: string) => {
+    if (!confirm("Ești sigur că vrei să ștergi acest punct?")) return;
+
+    try {
+      await coordinatesAPI.delete(coordId);
+      await fetchCoordinates();
+      showNotification("🗑️ Punct șters cu succes!", "success");
+    } catch (error) {
+      console.error("Error deleting coordinate:", error);
+      showNotification("❌ Eroare la ștergerea punctului!", "error");
     }
   };
 
@@ -355,7 +490,7 @@ const SettlementPage: React.FC = () => {
     ) {
       showNotification(
         "⚠️ Există deja un header! Nu poți adăuga mai mult de un header.",
-        "error"
+        "error",
       );
       setShowModal(false);
       setSelectedComponentType("");
@@ -374,7 +509,7 @@ const SettlementPage: React.FC = () => {
 
       showNotification(
         `⚠️ ${componentLabel} poate fi adăugată o singură dată pe pagină.`,
-        "error"
+        "error",
       );
       setShowModal(false);
       setSelectedComponentType("");
@@ -387,7 +522,7 @@ const SettlementPage: React.FC = () => {
     ) {
       showNotification(
         "⚠️ Există deja un footer! Nu poți adăuga mai mult de un footer.",
-        "error"
+        "error",
       );
       setShowModal(false);
       setSelectedComponentType("");
@@ -422,7 +557,7 @@ const SettlementPage: React.FC = () => {
         `⚠️ Nu poți șterge ${
           component.type === "header" ? "header-ul" : "footer-ul"
         }! Acesta este obligatoriu pentru toate paginile.`,
-        "error"
+        "error",
       );
       return;
     }
@@ -449,10 +584,10 @@ const SettlementPage: React.FC = () => {
 
   const handleChangeAlignment = (
     id: string,
-    alignment: "left" | "center" | "right"
+    alignment: "left" | "center" | "right",
   ) => {
     setComponents(
-      components.map((c) => (c.id === id ? { ...c, alignment } : c))
+      components.map((c) => (c.id === id ? { ...c, alignment } : c)),
     );
   };
 
@@ -469,8 +604,8 @@ const SettlementPage: React.FC = () => {
 
     setComponents(
       components.map((c) =>
-        c.id === editingComponent ? { ...c, content: { ...editFormData } } : c
-      )
+        c.id === editingComponent ? { ...c, content: { ...editFormData } } : c,
+      ),
     );
     setEditingComponent(null);
     setEditFormData({});
@@ -491,7 +626,7 @@ const SettlementPage: React.FC = () => {
     if (components.length === 0) {
       showNotification(
         "Adaugă cel puțin o componentă înainte de a salva!",
-        "error"
+        "error",
       );
       return;
     }
@@ -549,7 +684,7 @@ const SettlementPage: React.FC = () => {
         error.response?.data?.message || error.message || "Eroare necunoscută";
       showNotification(
         `❌ Eroare la salvarea site-ului: ${errorMessage}`,
-        "error"
+        "error",
       );
     } finally {
       setIsSaving(false);
@@ -804,8 +939,8 @@ ${htmlContent}
     <footer class="footer center">
       <div class="layout-container">
         <p>&copy; ${new Date().getFullYear()} ${
-      settlement?.name || "Website"
-    }. Toate drepturile rezervate.</p>
+          settlement?.name || "Website"
+        }. Toate drepturile rezervate.</p>
       </div>
     </footer>
 
@@ -1546,6 +1681,17 @@ body {
   font-size: 32px;
   margin-bottom: 24px;
   color: #10b981;
+}
+
+/* Custom marker hover effect */
+.custom-marker:hover > div {
+  transform: rotate(-45deg) scale(1.15) !important;
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6) !important;
+}
+
+.custom-marker {
+  cursor: pointer;
+  transition: all 0.3s ease;
 }
 
 #map {
@@ -2531,10 +2677,74 @@ function initMap() {
             maxZoom: 19
         }).addTo(mapInstance);
         
-        L.marker([LOCATION.lat, LOCATION.lng])
-            .addTo(mapInstance)
-            .bindPopup('<b>${settlement?.name || "Localitatea"}</b>')
-            .openPopup();
+        // Custom icon for coordinates
+        const customIcon = L.divIcon({
+            html: \`
+                <div style="
+                    width: 32px;
+                    height: 32px;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    border: 3px solid white;
+                    border-radius: 50% 50% 50% 0;
+                    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+                    transform: rotate(-45deg);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    transition: all 0.3s ease;
+                ">
+                    <span style="
+                        transform: rotate(45deg);
+                        font-size: 16px;
+                    ">📍</span>
+                </div>
+            \`,
+            className: 'custom-marker',
+            iconSize: [32, 32],
+            iconAnchor: [16, 32],
+            popupAnchor: [0, -32]
+        });
+        
+        // Fetch and display coordinates instead of settlement marker
+        console.log('Fetching coordinates from:', \`\${API_URL}/coordinates?settlement=\${SETTLEMENT_ID}\`);
+        
+        fetch(\`\${API_URL}/coordinates?settlement=\${SETTLEMENT_ID}\`)
+            .then(response => {
+                console.log('Coordinates API response status:', response.status);
+                if (!response.ok) {
+                    throw new Error(\`HTTP error! status: \${response.status}\`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Coordinates API response data:', data);
+                const coordinates = data.data.data;
+                console.log('Loaded coordinates count:', coordinates.length);
+                
+                if (coordinates.length === 0) {
+                    console.warn('No coordinates found for this settlement');
+                    return;
+                }
+                
+                // Add marker for each coordinate with custom icon
+                coordinates.forEach(coord => {
+                    console.log('Adding marker for:', coord.name, 'at', coord.latitude, coord.longitude);
+                    L.marker([coord.latitude, coord.longitude], { icon: customIcon })
+                        .addTo(mapInstance)
+                        .bindPopup(\`
+                            <div style="padding: 8px 4px; font-family: system-ui, -apple-system, sans-serif;">
+                                <strong style="font-size: 15px; color: #667eea; display: block; margin-bottom: 4px;">\${coord.name}</strong>
+                                <span style="font-size: 12px; color: #6b7280;">📍 Punct de interes</span>
+                            </div>
+                        \`);
+                });
+                
+                console.log('All coordinate markers added successfully');
+            })
+            .catch(error => {
+                console.error('Error loading coordinates:', error);
+                console.error('Error details:', error.message);
+            });
             
         console.log('Map initialized successfully');
         
@@ -2621,8 +2831,8 @@ function initMap() {
                       alignmentClass === "align-center"
                         ? "center"
                         : alignmentClass === "align-right"
-                        ? "flex-end"
-                        : "flex-start",
+                          ? "flex-end"
+                          : "flex-start",
                     flexWrap: "wrap",
                   }}
                 >
@@ -2769,7 +2979,7 @@ function initMap() {
                       .sort(
                         (a, b) =>
                           new Date(b.date).getTime() -
-                          new Date(a.date).getTime()
+                          new Date(a.date).getTime(),
                       )
                       .slice(0, 5)
                       .map((post) => (
@@ -2971,7 +3181,7 @@ function initMap() {
                             "ro-RO",
                             {
                               year: "numeric",
-                            }
+                            },
                           )}
                         </p>
                       </div>
@@ -3010,16 +3220,66 @@ function initMap() {
           >
             <div className="layout-container">
               {previewMapTitle && <h2>{previewMapTitle}</h2>}
+
+              {/* Control buttons pentru coordonate */}
+              <div
+                style={{
+                  display: "flex",
+                  gap: "10px",
+                  marginBottom: "15px",
+                  alignItems: "center",
+                }}
+              >
+                <button
+                  onClick={() => {
+                    setIsAddingCoordinate(!isAddingCoordinate);
+                    if (isAddingCoordinate) {
+                      setShowCoordinateForm(false);
+                      setTempCoordinate(null);
+                    }
+                  }}
+                  style={{
+                    padding: "10px 20px",
+                    background: isAddingCoordinate ? "#ef4444" : "#10b981",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "8px",
+                    cursor: "pointer",
+                    fontWeight: "600",
+                    fontSize: "14px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                  }}
+                >
+                  {isAddingCoordinate ? "❌ Anulează" : "➕ Adaugă Punct"}
+                </button>
+                {isAddingCoordinate && (
+                  <span
+                    style={{
+                      fontSize: "14px",
+                      color: "#6b7280",
+                      fontStyle: "italic",
+                    }}
+                  >
+                    💡 Click pe hartă pentru a adăuga un punct
+                  </span>
+                )}
+              </div>
+
               <div
                 id="map"
                 style={{
                   width: "100%",
                   height: "400px",
-                  marginTop: "20px",
+                  marginTop: "10px",
                   borderRadius: "12px",
                   overflow: "hidden",
-                  border: "2px solid #e5e7eb",
+                  border: isAddingCoordinate
+                    ? "2px solid #10b981"
+                    : "2px solid #e5e7eb",
                   boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                  cursor: isAddingCoordinate ? "crosshair" : "default",
                 }}
               >
                 {settlement ? (
@@ -3027,19 +3287,81 @@ function initMap() {
                     center={[settlement.lat, settlement.lng]}
                     zoom={11}
                     style={{ height: "100%", width: "100%" }}
-                    scrollWheelZoom={false}
+                    scrollWheelZoom={true}
                   >
                     <TileLayer
                       attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                       url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                     />
-                    <Marker position={[settlement.lat, settlement.lng]}>
-                      <Popup>
-                        <strong>{settlement.name}</strong>
-                        <br />
-                        {settlement.judet}
-                      </Popup>
-                    </Marker>
+                    <MapClickHandler
+                      onClick={handleMapClick}
+                      enabled={isAddingCoordinate}
+                    />
+
+                    {coordinates.map((coord) => (
+                      <Marker
+                        key={coord._id}
+                        position={[coord.latitude, coord.longitude]}
+                        icon={createCustomIcon()}
+                      >
+                        <Popup>
+                          <div
+                            style={{
+                              padding: "8px 4px",
+                              fontFamily:
+                                "system-ui, -apple-system, sans-serif",
+                            }}
+                          >
+                            <strong
+                              style={{
+                                fontSize: "15px",
+                                color: "#667eea",
+                                display: "block",
+                                marginBottom: "4px",
+                              }}
+                            >
+                              {coord.name}
+                            </strong>
+                            <span
+                              style={{
+                                fontSize: "12px",
+                                color: "#6b7280",
+                                display: "block",
+                                marginBottom: "8px",
+                              }}
+                            >
+                              📍 Punct de interes
+                            </span>
+                            <button
+                              onClick={() => handleDeleteCoordinate(coord._id)}
+                              style={{
+                                padding: "6px 12px",
+                                background: "#ef4444",
+                                color: "white",
+                                border: "none",
+                                borderRadius: "6px",
+                                cursor: "pointer",
+                                fontSize: "12px",
+                                width: "100%",
+                              }}
+                            >
+                              🗑️ Șterge
+                            </button>
+                          </div>
+                        </Popup>
+                      </Marker>
+                    ))}
+
+                    {tempCoordinate && (
+                      <Marker
+                        position={[tempCoordinate.lat, tempCoordinate.lng]}
+                        icon={createCustomIcon()}
+                      >
+                        <Popup>
+                          <strong>Punct nou</strong>
+                        </Popup>
+                      </Marker>
+                    )}
                   </MapContainer>
                 ) : (
                   <div
@@ -3056,6 +3378,155 @@ function initMap() {
                   </div>
                 )}
               </div>
+
+              {/* Form pentru adăugare coordonată */}
+              {showCoordinateForm && (
+                <div
+                  style={{
+                    marginTop: "20px",
+                    padding: "20px",
+                    background: "#f9fafb",
+                    border: "2px solid #10b981",
+                    borderRadius: "12px",
+                  }}
+                >
+                  <h3 style={{ marginBottom: "15px", color: "#1f2937" }}>
+                    Adaugă Punct Nou
+                  </h3>
+                  <form onSubmit={handleCreateCoordinate}>
+                    <div style={{ marginBottom: "15px" }}>
+                      <label
+                        style={{
+                          display: "block",
+                          marginBottom: "8px",
+                          fontWeight: "600",
+                          color: "#374151",
+                        }}
+                      >
+                        Nume Punct:
+                      </label>
+                      <input
+                        type="text"
+                        value={coordinateFormData.name}
+                        onChange={(e) =>
+                          setCoordinateFormData({
+                            ...coordinateFormData,
+                            name: e.target.value,
+                          })
+                        }
+                        placeholder="Ex: Primăria, Școala, Parc"
+                        style={{
+                          width: "100%",
+                          padding: "12px",
+                          border: "1px solid #d1d5db",
+                          borderRadius: "8px",
+                          fontSize: "14px",
+                        }}
+                        required
+                        autoFocus
+                      />
+                    </div>
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr 1fr",
+                        gap: "15px",
+                        marginBottom: "15px",
+                      }}
+                    >
+                      <div>
+                        <label
+                          style={{
+                            display: "block",
+                            marginBottom: "8px",
+                            fontWeight: "600",
+                            color: "#374151",
+                          }}
+                        >
+                          Latitudine:
+                        </label>
+                        <input
+                          type="number"
+                          step="any"
+                          value={coordinateFormData.latitude}
+                          readOnly
+                          style={{
+                            width: "100%",
+                            padding: "12px",
+                            border: "1px solid #d1d5db",
+                            borderRadius: "8px",
+                            fontSize: "14px",
+                            background: "#f3f4f6",
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <label
+                          style={{
+                            display: "block",
+                            marginBottom: "8px",
+                            fontWeight: "600",
+                            color: "#374151",
+                          }}
+                        >
+                          Longitudine:
+                        </label>
+                        <input
+                          type="number"
+                          step="any"
+                          value={coordinateFormData.longitude}
+                          readOnly
+                          style={{
+                            width: "100%",
+                            padding: "12px",
+                            border: "1px solid #d1d5db",
+                            borderRadius: "8px",
+                            fontSize: "14px",
+                            background: "#f3f4f6",
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: "10px" }}>
+                      <button
+                        type="submit"
+                        style={{
+                          padding: "12px 24px",
+                          background: "#10b981",
+                          color: "white",
+                          border: "none",
+                          borderRadius: "8px",
+                          cursor: "pointer",
+                          fontWeight: "600",
+                          fontSize: "14px",
+                        }}
+                      >
+                        ✅ Salvează Punct
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowCoordinateForm(false);
+                          setTempCoordinate(null);
+                          setIsAddingCoordinate(false);
+                        }}
+                        style={{
+                          padding: "12px 24px",
+                          background: "#6b7280",
+                          color: "white",
+                          border: "none",
+                          borderRadius: "8px",
+                          cursor: "pointer",
+                          fontWeight: "600",
+                          fontSize: "14px",
+                        }}
+                      >
+                        Anulează
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
             </div>
           </section>
         );
@@ -3122,8 +3593,8 @@ function initMap() {
     previewMode === "desktop"
       ? "100%"
       : previewMode === "tablet"
-      ? "768px"
-      : "375px";
+        ? "768px"
+        : "375px";
 
   return (
     <div className="settlement-page">
@@ -3153,7 +3624,7 @@ function initMap() {
                     if (
                       id &&
                       confirm(
-                        "Ești sigur că vrei să ștergi cache-ul? Progresul nesalvat va fi pierdut."
+                        "Ești sigur că vrei să ștergi cache-ul? Progresul nesalvat va fi pierdut.",
                       )
                     ) {
                       clearCache(id);
@@ -3182,8 +3653,8 @@ function initMap() {
                   {isSaving
                     ? "Se salvează..."
                     : settlement?.active
-                    ? "💾 Actualizează Site"
-                    : "💾 Salvează Site"}
+                      ? "💾 Actualizează Site"
+                      : "💾 Salvează Site"}
                 </button>
               </>
             )}
@@ -3225,7 +3696,7 @@ function initMap() {
                       .sort(
                         (a, b) =>
                           new Date(b.date).getTime() -
-                          new Date(a.date).getTime()
+                          new Date(a.date).getTime(),
                       )
                       .slice(0, 3)
                       .map((post) => (
@@ -3600,8 +4071,8 @@ function initMap() {
                       activeCodeTab === "html"
                         ? generateHTML()
                         : activeCodeTab === "css"
-                        ? generateCSS()
-                        : generateJS();
+                          ? generateCSS()
+                          : generateJS();
                     navigator.clipboard.writeText(code);
                     showNotification("📋 Cod copiat în clipboard!", "success");
                   }}
@@ -3696,7 +4167,7 @@ function initMap() {
                     setShowStyleEditor(false);
                     showNotification(
                       "✅ Stiluri CSS salvate! Vezi rezultatul în preview.",
-                      "success"
+                      "success",
                     );
                   }}
                   style={{ flex: 1 }}

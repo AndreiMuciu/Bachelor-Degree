@@ -47,6 +47,14 @@ export interface Member {
   settlement: string;
 }
 
+export interface Coordinate {
+  _id: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  settlement: string;
+}
+
 export interface WebsiteComponent {
   id: string;
   type:
