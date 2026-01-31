@@ -1,0 +1,40 @@
+name: Deploy to VM
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Docker image tag to deploy"
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          script: |
+            IMAGE=andreimuciu/bachelor-degree:${{ github.event.inputs.tag }}
+            CONTAINER=bachelor-backend-prod
+
+            echo "Logging into Docker Hub"
+            docker login -u ${{ secrets.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_TOKEN }}
+
+            echo "Pulling image $IMAGE"
+            docker pull $IMAGE
+
+            echo "Stopping old container"
+            docker stop 0 || true
+            docker rm 0 || true
+
+            echo "Starting new container"
+            docker run -d \
+              --name $CONTAINER \
+              -p 5000:5000 \
+              --restart unless-stopped \
+              $IMAGE
