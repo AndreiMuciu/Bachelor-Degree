@@ -9,7 +9,7 @@ on:
         default: "develop-0.x.x"
 
 jobs:
-  build:
+  build_and_push:
     runs-on: ubuntu-latest
 
     steps:
@@ -36,10 +36,7 @@ jobs:
             -f backend/Dockerfile \
             -t andreimuciu/bachelor-degree:${{ github.event.inputs.tag }} \
             ./backend
-  push:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
+
       - name: Push Docker image
         run: |
           docker push andreimuciu/bachelor-degree:${{ github.event.inputs.tag }}
