@@ -29,8 +29,8 @@ jobs:
             docker pull $IMAGE
 
             echo "Stopping old container"
-            docker stop 0 || true
-            docker rm 0 || true
+            docker stop $CONTAINER || true
+            docker rm $CONTAINER || true
 
             echo "Starting new container"
             docker run -d \
