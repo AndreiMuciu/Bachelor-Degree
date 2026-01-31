@@ -6,6 +6,7 @@ on:
       tag:
         description: "Docker image tag to deploy"
         required: true
+        default: "develop-0.x.x"
 
 jobs:
   deploy:
