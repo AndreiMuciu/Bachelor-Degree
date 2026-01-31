@@ -36,7 +36,10 @@ jobs:
             -f backend/Dockerfile \
             -t andreimuciu/bachelor-degree:${{ github.event.inputs.tag }} \
             ./backend
-
+  push:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
       - name: Push Docker image
         run: |
           docker push andreimuciu/bachelor-degree:${{ github.event.inputs.tag }}
