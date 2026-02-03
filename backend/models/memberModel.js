@@ -28,6 +28,9 @@ const memberSchema = new mongoose.Schema({
     ref: "Settlement",
     required: [true, "A member must belong to a settlement"],
   },
+  photoPath: {
+    type: String,
+  },
 });
 
 const Member = mongoose.model("Member", memberSchema);

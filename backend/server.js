@@ -4,7 +4,7 @@ import app from "./app.js";
 
 const DB = process.env.MONGO_URI.replace(
   "<db_password>",
-  process.env.DB_PASSWORD
+  process.env.DB_PASSWORD,
 );
 
 mongoose
