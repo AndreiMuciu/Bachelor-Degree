@@ -16,6 +16,33 @@ import passport from "passport";
 
 const app = express();
 
+// If you're behind a reverse proxy / load balancer (Docker, Nginx, Cloudflare, Render, etc.)
+// you must enable `trust proxy` so req.ip is derived correctly and express-rate-limit can
+// reliably identify clients.
+//
+// Configure via env:
+// - TRUST_PROXY=1 (recommended when there is exactly one proxy hop)
+// - TRUST_PROXY=true (trust all proxies; only if you really know what you're doing)
+// - TRUST_PROXY=loopback (trust only loopback)
+const rawTrustProxy = process.env.TRUST_PROXY;
+if (rawTrustProxy != null && rawTrustProxy !== "") {
+  const asNumber = Number(rawTrustProxy);
+  app.set(
+    "trust proxy",
+    Number.isFinite(asNumber)
+      ? asNumber
+      : rawTrustProxy === "true"
+        ? true
+        : rawTrustProxy,
+  );
+} else if (
+  process.env.NODE_ENV === "production" ||
+  process.env.PRODUCTION === "true"
+) {
+  // Sensible default for most deployments: one proxy in front of Node.
+  app.set("trust proxy", 1);
+}
+
 const corsOptions = {
   origin: function (origin, callback) {
     // Permite domeniul principal și toate subdomeniile
