@@ -45,6 +45,7 @@ export interface Member {
   gender?: string;
   position?: string;
   settlement: string;
+  photoPath?: string;
 }
 
 export interface Coordinate {

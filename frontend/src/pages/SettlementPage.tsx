@@ -145,6 +145,9 @@ const SettlementPage: React.FC = () => {
   const [showBlogModal, setShowBlogModal] = useState(false);
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
+  const [memberImageErrors, setMemberImageErrors] = useState<
+    Record<string, boolean>
+  >({});
   const [coordinates, setCoordinates] = useState<Coordinate[]>([]);
   const [isAddingCoordinate, setIsAddingCoordinate] = useState(false);
   const [tempCoordinate, setTempCoordinate] = useState<{
@@ -1545,6 +1548,18 @@ body {
     font-size: 32px;
 }
 
+.member-avatar.has-photo {
+  background: transparent;
+}
+
+.member-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
+}
+
 .member-card h3 {
     font-size: 18px;
     margin-bottom: 4px;
@@ -1625,6 +1640,18 @@ body {
     justify-content: center;
     margin: 0 auto 20px;
     font-size: 48px;
+}
+
+.member-modal-avatar-large.has-photo {
+  background: transparent;
+}
+
+.member-modal-avatar-large img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
 }
 
 .member-modal-header h2 {
@@ -2271,6 +2298,26 @@ const membersPerPage = 12;
 let allMemberElements = [];
 let filteredMemberElements = [];
 
+function memberPhotoUrl(memberId) {
+  return API_URL + '/members/' + memberId + '/photo';
+}
+
+function renderMemberAvatar(member) {
+  if (member && member.photoPath) {
+    const fullName = (member.firstName || '') + ' ' + (member.lastName || '');
+    return '<div class="member-avatar has-photo"><img src="' + memberPhotoUrl(member._id) + '" alt="' + escapeHtml(fullName) + '" loading="lazy" onerror="this.onerror=null; var p=this.parentElement; if(p){p.classList.remove(\\\'has-photo\\\'); p.textContent=\\\'👤\\\';}" /></div>';
+  }
+  return '<div class="member-avatar">👤</div>';
+}
+
+function renderMemberAvatarLarge(member) {
+  if (member && member.photoPath) {
+    const fullName = (member.firstName || '') + ' ' + (member.lastName || '');
+    return '<div class="member-modal-avatar-large has-photo"><img src="' + memberPhotoUrl(member._id) + '" alt="' + escapeHtml(fullName) + '" loading="lazy" onerror="this.onerror=null; var p=this.parentElement; if(p){p.classList.remove(\\\'has-photo\\\'); p.textContent=\\\'👤\\\';}" /></div>';
+  }
+  return '<div class="member-modal-avatar-large">👤</div>';
+}
+
 async function loadAllMembers() {
     const container = document.getElementById('all-members');
     const loadingMessage = document.getElementById('members-loading-message');
@@ -2332,7 +2379,7 @@ async function loadAllMembers() {
             
             return \`
             <div class="member-card" data-member-id="\${member._id}" data-name="\${escapeHtml(fullName.toLowerCase())}" onclick="openMemberModal('\${member._id}')">
-                <div class="member-avatar">👤</div>
+            \${renderMemberAvatar(member)}
                 <h3>\${escapeHtml(fullName)}</h3>
                 \${position}
                 <div class="member-info">📅 Născut \${birthYear}</div>
@@ -2540,7 +2587,7 @@ async function loadHomeMembers() {
             
             return \`
             <a href="members.html" class="member-card" data-member-id="\${member._id}" style="text-decoration: none; color: inherit;">
-                <div class="member-avatar">👤</div>
+            \${renderMemberAvatar(member)}
                 <h3>\${escapeHtml(fullName)}</h3>
                 \${position}
                 <div class="member-info">📅 Născut \${birthYear}</div>
@@ -2593,13 +2640,15 @@ async function openMemberModal(memberId) {
             <h3>Despre</h3>
             <p>\${escapeHtml(member.description)}</p>
         \` : '';
+
+        const avatarLarge = renderMemberAvatarLarge(member);
         
         const modalHTML = \`
         <div class="member-modal active" id="member-modal" onclick="closeMemberModal(event)">
             <div class="member-modal-content" onclick="event.stopPropagation()">
                 <button class="member-modal-close" onclick="closeMemberModal()">✕</button>
                 <div class="member-modal-header">
-                    <div class="member-modal-avatar-large">👤</div>
+              \${avatarLarge}
                     <h2>\${escapeHtml(fullName)}</h2>
                     \${position}
                 </div>
@@ -3119,73 +3168,106 @@ function initMap() {
                   </div>
                 ) : (
                   <>
-                    {members.slice(0, 5).map((member) => (
-                      <div
-                        key={member._id}
-                        style={{
-                          background: "white",
-                          padding: "24px",
-                          borderRadius: "12px",
-                          border: "1px solid #e5e7eb",
-                          boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-                          textAlign: "center",
-                          transition: "all 0.3s ease",
-                        }}
-                      >
-                        <div
-                          style={{
-                            width: "80px",
-                            height: "80px",
-                            borderRadius: "50%",
-                            background:
-                              "linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            margin: "0 auto 16px",
-                            fontSize: "32px",
-                          }}
-                        >
-                          👤
-                        </div>
-                        <h4
-                          style={{
-                            marginBottom: "4px",
-                            fontSize: "18px",
-                            color: "#1f2937",
-                            fontWeight: "700",
-                          }}
-                        >
-                          {member.firstName} {member.lastName}
-                        </h4>
-                        {member.position && (
-                          <p
+                    {members.slice(0, 5).map((member) =>
+                      (() => {
+                        const showPhoto =
+                          Boolean(member.photoPath) &&
+                          !memberImageErrors[member._id];
+
+                        return (
+                          <div
+                            key={member._id}
                             style={{
-                              fontSize: "14px",
-                              color: "#6366f1",
-                              fontWeight: "600",
-                              marginBottom: "8px",
+                              background: "white",
+                              padding: "24px",
+                              borderRadius: "12px",
+                              border: "1px solid #e5e7eb",
+                              boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+                              textAlign: "center",
+                              transition: "all 0.3s ease",
                             }}
                           >
-                            {member.position}
-                          </p>
-                        )}
-                        <p
-                          style={{
-                            fontSize: "12px",
-                            color: "#9ca3af",
-                          }}
-                        >
-                          📅{" "}
-                          {new Date(member.dateOfBirth).toLocaleDateString(
-                            "ro-RO",
-                            {
-                              year: "numeric",
-                            },
-                          )}
-                        </p>
-                      </div>
-                    ))}
+                            <div
+                              style={{
+                                width: "80px",
+                                height: "80px",
+                                borderRadius: "50%",
+                                background: showPhoto
+                                  ? "transparent"
+                                  : "linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                margin: "0 auto 16px",
+                                fontSize: showPhoto ? 0 : "32px",
+                                position: "relative",
+                                overflow: "hidden",
+                              }}
+                            >
+                              {showPhoto && (
+                                <img
+                                  src={memberAPI.getPhotoUrl(member._id)}
+                                  alt={`${member.firstName} ${member.lastName}`}
+                                  loading="lazy"
+                                  style={{
+                                    position: "absolute",
+                                    inset: 0,
+                                    width: "100%",
+                                    height: "100%",
+                                    objectFit: "cover",
+                                    borderRadius: "50%",
+                                    display: "block",
+                                  }}
+                                  onError={() =>
+                                    setMemberImageErrors((prev) => ({
+                                      ...prev,
+                                      [member._id]: true,
+                                    }))
+                                  }
+                                />
+                              )}
+                              {!showPhoto && <span aria-hidden="true">👤</span>}
+                            </div>
+                            <h4
+                              style={{
+                                marginBottom: "4px",
+                                fontSize: "18px",
+                                color: "#1f2937",
+                                fontWeight: "700",
+                              }}
+                            >
+                              {member.firstName} {member.lastName}
+                            </h4>
+                            {member.position && (
+                              <p
+                                style={{
+                                  fontSize: "14px",
+                                  color: "#6366f1",
+                                  fontWeight: "600",
+                                  marginBottom: "8px",
+                                }}
+                              >
+                                {member.position}
+                              </p>
+                            )}
+                            <p
+                              style={{
+                                fontSize: "12px",
+                                color: "#9ca3af",
+                              }}
+                            >
+                              📅{" "}
+                              {new Date(member.dateOfBirth).toLocaleDateString(
+                                "ro-RO",
+                                {
+                                  year: "numeric",
+                                },
+                              )}
+                            </p>
+                          </div>
+                        );
+                      })(),
+                    )}
                     {members.length > 5 && (
                       <div
                         style={{

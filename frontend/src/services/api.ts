@@ -165,12 +165,47 @@ export const memberAPI = {
     return response.data.data.data;
   },
 
-  update: async (id: string, data: Partial<Member>): Promise<Member> => {
+  update: async (
+    id: string,
+    data: Partial<Member> & { photo?: File | null },
+  ): Promise<Member> => {
+    if (data.photo) {
+      const formData = new FormData();
+
+      for (const [key, value] of Object.entries(data)) {
+        if (value === undefined || value === null) continue;
+        if (key === "photo") continue;
+
+        if (value instanceof Date) {
+          formData.append(key, value.toISOString());
+        } else {
+          formData.append(key, String(value));
+        }
+      }
+
+      formData.append("photo", data.photo);
+
+      const response = await api.patch<{ data: { data: Member } }>(
+        `/members/${id}`,
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        },
+      );
+      return response.data.data.data;
+    }
+
+    const { photo, ...jsonData } = data;
     const response = await api.patch<{ data: { data: Member } }>(
       `/members/${id}`,
-      data,
+      jsonData,
     );
     return response.data.data.data;
+  },
+
+  getPhotoUrl: (id: string): string => {
+    // Endpoint redirects to a short-lived signed URL in R2
+    return `${API_BASE_URL}/members/${id}/photo`;
   },
 
   delete: async (id: string): Promise<void> => {

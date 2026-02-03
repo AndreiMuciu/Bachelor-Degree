@@ -19,6 +19,7 @@ const MembersManagementPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [membersPerPage] = useState(10);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -38,7 +39,7 @@ const MembersManagementPage: React.FC = () => {
       const data = await memberAPI.getBySettlement(settlementId);
       // Sort members alphabetically by last name
       const sortedMembers = data.sort((a, b) =>
-        a.lastName.localeCompare(b.lastName)
+        a.lastName.localeCompare(b.lastName),
       );
       setMembers(sortedMembers);
     } catch (error) {
@@ -64,7 +65,10 @@ const MembersManagementPage: React.FC = () => {
       };
 
       if (editingMember) {
-        await memberAPI.update(editingMember._id, dataToSubmit);
+        await memberAPI.update(editingMember._id, {
+          ...dataToSubmit,
+          photo: photoFile,
+        });
       } else {
         await memberAPI.create(dataToSubmit);
       }
@@ -88,6 +92,7 @@ const MembersManagementPage: React.FC = () => {
 
   const handleEdit = (member: Member) => {
     setEditingMember(member);
+    setPhotoFile(null);
     setFormData({
       firstName: member.firstName,
       lastName: member.lastName,
@@ -102,6 +107,7 @@ const MembersManagementPage: React.FC = () => {
   const handleCloseModal = () => {
     setShowModal(false);
     setEditingMember(null);
+    setPhotoFile(null);
     setFormData({
       firstName: "",
       lastName: "",
@@ -137,7 +143,7 @@ const MembersManagementPage: React.FC = () => {
   const indexOfFirstMember = indexOfLastMember - membersPerPage;
   const currentMembers = filteredMembers.slice(
     indexOfFirstMember,
-    indexOfLastMember
+    indexOfLastMember,
   );
 
   const handlePageChange = (pageNumber: number) => {
@@ -225,7 +231,7 @@ const MembersManagementPage: React.FC = () => {
                       >
                         {page}
                       </button>
-                    )
+                    ),
                   )}
                 </div>
 
@@ -248,6 +254,8 @@ const MembersManagementPage: React.FC = () => {
             onFormDataChange={(data) => setFormData(data)}
             onSubmit={handleSubmit}
             onClose={handleCloseModal}
+            photoFile={photoFile}
+            onPhotoChange={setPhotoFile}
           />
         )}
       </div>

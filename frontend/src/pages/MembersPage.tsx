@@ -9,6 +9,7 @@ const MembersPage: React.FC = () => {
   const [members, setMembers] = useState<Member[]>([]);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [loading, setLoading] = useState(true);
+  const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     fetchMembers();
@@ -95,15 +96,32 @@ const MembersPage: React.FC = () => {
       <div className="members-preview-grid">
         {members.map((member) => {
           const fullName = `${member.firstName} ${member.lastName}`;
+          const showPhoto =
+            Boolean(member.photoPath) && !imageErrors[member._id];
           return (
             <div
               key={member._id}
               className="member-preview-card"
               onClick={() => handleMemberClick(member)}
             >
-              <div className="member-preview-avatar-placeholder">
-                <span>👤</span>
-              </div>
+              {showPhoto ? (
+                <div className="member-preview-avatar">
+                  <img
+                    src={memberAPI.getPhotoUrl(member._id)}
+                    alt={fullName}
+                    onError={() =>
+                      setImageErrors((prev) => ({
+                        ...prev,
+                        [member._id]: true,
+                      }))
+                    }
+                  />
+                </div>
+              ) : (
+                <div className="member-preview-avatar-placeholder">
+                  <span>👤</span>
+                </div>
+              )}
               <h3>{fullName}</h3>
               {member.position && (
                 <p className="member-preview-position">{member.position}</p>
@@ -124,9 +142,25 @@ const MembersPage: React.FC = () => {
               ✕
             </button>
             <div className="member-modal-header">
-              <div className="member-modal-avatar-placeholder">
-                <span>👤</span>
-              </div>
+              {Boolean(selectedMember.photoPath) &&
+              !imageErrors[selectedMember._id] ? (
+                <div className="member-modal-avatar">
+                  <img
+                    src={memberAPI.getPhotoUrl(selectedMember._id)}
+                    alt={`${selectedMember.firstName} ${selectedMember.lastName}`}
+                    onError={() =>
+                      setImageErrors((prev) => ({
+                        ...prev,
+                        [selectedMember._id]: true,
+                      }))
+                    }
+                  />
+                </div>
+              ) : (
+                <div className="member-modal-avatar-placeholder">
+                  <span>👤</span>
+                </div>
+              )}
               <div className="member-modal-title">
                 <h2>{`${selectedMember.firstName} ${selectedMember.lastName}`}</h2>
                 {selectedMember.position && (
@@ -148,7 +182,7 @@ const MembersPage: React.FC = () => {
                         day: "numeric",
                         month: "long",
                         year: "numeric",
-                      }
+                      },
                     )}
                   </span>
                 </div>

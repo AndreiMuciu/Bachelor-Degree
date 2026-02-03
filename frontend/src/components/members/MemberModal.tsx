@@ -13,6 +13,8 @@ interface MemberModalProps {
   isEditing: boolean;
   formData: MemberFormData;
   onFormDataChange: (data: MemberFormData) => void;
+  photoFile: File | null;
+  onPhotoChange: (file: File | null) => void;
   onSubmit: (e: React.FormEvent) => void;
   onClose: () => void;
 }
@@ -21,6 +23,8 @@ const MemberModal: React.FC<MemberModalProps> = ({
   isEditing,
   formData,
   onFormDataChange,
+  photoFile,
+  onPhotoChange,
   onSubmit,
   onClose,
 }) => {
@@ -34,6 +38,21 @@ const MemberModal: React.FC<MemberModalProps> = ({
           </button>
         </div>
         <form onSubmit={onSubmit}>
+          {isEditing && (
+            <div className="form-group">
+              <label htmlFor="photo">Poză profil</label>
+              <input
+                type="file"
+                id="photo"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={(e) =>
+                  onPhotoChange(e.target.files?.[0] ? e.target.files[0] : null)
+                }
+              />
+              {photoFile && <small>Fișier selectat: {photoFile.name}</small>}
+            </div>
+          )}
+
           <div className="form-group">
             <label htmlFor="firstName">
               Prenume <span className="required">*</span>

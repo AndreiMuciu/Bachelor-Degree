@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useState } from "react";
 import type { Member } from "../../types";
+import { memberAPI } from "../../services/api";
 
 interface MemberCardProps {
   member: Member;
@@ -12,6 +13,7 @@ const MemberCard: React.FC<MemberCardProps> = ({
   onEdit,
   onDelete,
 }) => {
+  const [imageError, setImageError] = useState(false);
   const fullName = `${member.firstName} ${member.lastName}`;
   const birthDate = new Date(member.dateOfBirth).toLocaleDateString("ro-RO", {
     day: "numeric",
@@ -19,12 +21,24 @@ const MemberCard: React.FC<MemberCardProps> = ({
     year: "numeric",
   });
 
+  const showPhoto = Boolean(member.photoPath) && !imageError;
+
   return (
     <div className="member-card">
       <div className="member-header">
-        <div className="member-avatar-placeholder">
-          <span>👤</span>
-        </div>
+        {showPhoto ? (
+          <div className="member-avatar">
+            <img
+              src={memberAPI.getPhotoUrl(member._id)}
+              alt={fullName}
+              onError={() => setImageError(true)}
+            />
+          </div>
+        ) : (
+          <div className="member-avatar-placeholder">
+            <span>👤</span>
+          </div>
+        )}
       </div>
       <h3>{fullName}</h3>
       {member.position && <p className="member-position">{member.position}</p>}
