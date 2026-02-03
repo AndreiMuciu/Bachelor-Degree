@@ -15,6 +15,10 @@ import coordinatesRouter from "./routes/coordinatesRoutes.js";
 import passport from "passport";
 
 const app = express();
+
+// Trust proxy - necesar pentru Docker și reverse proxies (nginx, Cloudflare, etc.)
+app.set("trust proxy", 1);
+
 const corsOptions = {
   origin: function (origin, callback) {
     // Permite domeniul principal și toate subdomeniile
