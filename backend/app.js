@@ -57,7 +57,11 @@ app.use(cors(corsOptions));
 );*/
 
 // Security HTTP headers
-app.use(helmet());
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  }),
+);
 
 // Rate limiting pentru toate rutele
 const limiter = rateLimit({
