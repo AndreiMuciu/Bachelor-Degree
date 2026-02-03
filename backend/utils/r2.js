@@ -148,3 +148,15 @@ export const r2GetSignedReadUrl = async ({ key, expiresInSeconds = 300 }) => {
 
   return { url, expiresInSeconds };
 };
+
+export const r2GetObject = async ({ key }) => {
+  const client = getR2Client();
+  const Bucket = getR2Bucket();
+
+  return client.send(
+    new GetObjectCommand({
+      Bucket,
+      Key: key,
+    }),
+  );
+};
