@@ -12,7 +12,7 @@ export const getAllMembers = getAll(Member);
 export const getMember = getOne(Member);
 export const createMember = createOne(Member);
 
-const MEMBER_PROFILE_KEY = (memberId) => `members/${memberId}/profile`;
+const MEMBER_PROFILE_KEY = (memberId) => `${memberId}/profile`;
 
 export const updateMember = async (req, res) => {
   try {
