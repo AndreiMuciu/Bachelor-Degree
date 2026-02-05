@@ -1,12 +1,10 @@
 import {
   S3Client,
   PutObjectCommand,
-  GetObjectCommand,
   ListObjectsV2Command,
   DeleteObjectCommand,
   DeleteObjectsCommand,
 } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 const requiredEnv = (name) => {
   const value = process.env[name];
@@ -131,32 +129,4 @@ export const r2DeleteByPrefix = async (prefix, { keepKeys = [] } = {}) => {
   const toDelete = allKeys.filter((k) => !keep.has(k));
   await r2DeleteKeys(toDelete);
   return { deletedCount: toDelete.length };
-};
-
-export const r2GetSignedReadUrl = async ({ key, expiresInSeconds = 300 }) => {
-  const client = getR2Client();
-  const Bucket = getR2Bucket();
-
-  const command = new GetObjectCommand({
-    Bucket,
-    Key: key,
-  });
-
-  const url = await getSignedUrl(client, command, {
-    expiresIn: expiresInSeconds,
-  });
-
-  return { url, expiresInSeconds };
-};
-
-export const r2GetObject = async ({ key }) => {
-  const client = getR2Client();
-  const Bucket = getR2Bucket();
-
-  return client.send(
-    new GetObjectCommand({
-      Bucket,
-      Key: key,
-    }),
-  );
 };

@@ -204,7 +204,7 @@ export const memberAPI = {
   },
 
   getPhotoUrl: (id: string): string => {
-    // Endpoint redirects to a short-lived signed URL in R2
+    // Endpoint redirects to public R2 custom domain URL
     return `${API_BASE_URL}/members/${id}/photo`;
   },
 
