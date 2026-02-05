@@ -29,6 +29,7 @@ export const updateMember = async (req, res) => {
         key,
         body: req.file.buffer,
         contentType: req.file.mimetype,
+        cacheControl: "no-cache, no-store, must-revalidate",
       });
 
       req.body.photoPath = key;

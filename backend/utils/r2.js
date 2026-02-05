@@ -39,7 +39,7 @@ export const r2PutObject = async ({
   key,
   body,
   contentType,
-  cacheControl = "public, max-age=3600",
+  cacheControl = "no-cache, no-store, must-revalidate",
 }) => {
   const client = getR2Client();
   const Bucket = getR2Bucket();
