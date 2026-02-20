@@ -7,6 +7,9 @@ const UserSettlementAssignment: React.FC = () => {
   const [settlements, setSettlements] = useState<Settlement[]>([]);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [selectedSettlements, setSelectedSettlements] = useState<string[]>([]);
+  const [userPage, setUserPage] = useState(1);
+  const [settlementPage, setSettlementPage] = useState(1);
+  const [itemsPerPage] = useState(10);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -37,6 +40,7 @@ const UserSettlementAssignment: React.FC = () => {
     const settlementIds =
       user.settlements?.map((s) => (typeof s === "string" ? s : s._id)) || [];
     setSelectedSettlements(settlementIds);
+    setSettlementPage(1);
     setError("");
     setSuccess("");
   };
@@ -62,18 +66,24 @@ const UserSettlementAssignment: React.FC = () => {
       setError("");
       setSuccess("");
 
-      await adminAPI.updateUser(selectedUser._id, {
+      const updatedUser = await adminAPI.updateUser(selectedUser._id, {
         settlements: selectedSettlements,
       });
 
-      setSuccess("Settlementuri asignate cu succes!");
-      await loadData();
+      // Actualizăm lista de utilizatori în memorie cu user-ul întors de API
+      setUsers((prevUsers) =>
+        prevUsers.map((u) => (u._id === updatedUser._id ? updatedUser : u)),
+      );
 
-      // Update selected user with new data
-      const updatedUser = users.find((u) => u._id === selectedUser._id);
-      if (updatedUser) {
-        handleUserSelect(updatedUser);
-      }
+      // Actualizăm utilizatorul selectat și settlement-urile lui
+      setSelectedUser(updatedUser);
+      const settlementIds =
+        updatedUser.settlements?.map((s) =>
+          typeof s === "string" ? s : s._id,
+        ) || [];
+      setSelectedSettlements(settlementIds);
+
+      setSuccess("Settlementuri asignate cu succes!");
     } catch (err: any) {
       setError(
         err.response?.data?.message || "Eroare la asignarea settlementurilor",
@@ -82,6 +92,21 @@ const UserSettlementAssignment: React.FC = () => {
       setLoading(false);
     }
   };
+
+  // Pagination calculations
+  const indexOfLastUser = userPage * itemsPerPage;
+  const indexOfFirstUser = indexOfLastUser - itemsPerPage;
+  const currentUsers = users.slice(indexOfFirstUser, indexOfLastUser);
+  const totalUserPages = Math.ceil(users.length / itemsPerPage) || 1;
+
+  const indexOfLastSettlement = settlementPage * itemsPerPage;
+  const indexOfFirstSettlement = indexOfLastSettlement - itemsPerPage;
+  const currentSettlements = settlements.slice(
+    indexOfFirstSettlement,
+    indexOfLastSettlement,
+  );
+  const totalSettlementPages =
+    Math.ceil(settlements.length / itemsPerPage) || 1;
 
   return (
     <div className="admin-section">
@@ -103,7 +128,7 @@ const UserSettlementAssignment: React.FC = () => {
               </div>
             )}
             {!loading &&
-              users.map((user) => (
+              currentUsers.map((user) => (
                 <div
                   key={user._id}
                   className={`user-select-item ${
@@ -123,6 +148,29 @@ const UserSettlementAssignment: React.FC = () => {
                 </div>
               ))}
           </div>
+          {!loading && users.length > itemsPerPage && (
+            <div className="pagination">
+              <button
+                className="pagination-btn"
+                onClick={() => setUserPage((prev) => Math.max(prev - 1, 1))}
+                disabled={userPage === 1}
+              >
+                « Anterior
+              </button>
+              <div className="pagination-info">
+                Pagina {userPage} din {totalUserPages}
+              </div>
+              <button
+                className="pagination-btn"
+                onClick={() =>
+                  setUserPage((prev) => Math.min(prev + 1, totalUserPages))
+                }
+                disabled={userPage === totalUserPages}
+              >
+                Următorul »
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="assignment-panel">
@@ -143,7 +191,7 @@ const UserSettlementAssignment: React.FC = () => {
                     Nu există settlementuri disponibile
                   </div>
                 )}
-                {settlements.map((settlement) => (
+                {currentSettlements.map((settlement) => (
                   <label
                     key={settlement._id}
                     className="settlement-checkbox-item"
@@ -165,6 +213,33 @@ const UserSettlementAssignment: React.FC = () => {
                   Selectate: {selectedSettlements.length} din{" "}
                   {settlements.length}
                 </div>
+                {settlements.length > itemsPerPage && (
+                  <div className="pagination small">
+                    <button
+                      className="pagination-btn"
+                      onClick={() =>
+                        setSettlementPage((prev) => Math.max(prev - 1, 1))
+                      }
+                      disabled={settlementPage === 1}
+                    >
+                      « Anterior
+                    </button>
+                    <div className="pagination-info">
+                      Pagina {settlementPage} din {totalSettlementPages}
+                    </div>
+                    <button
+                      className="pagination-btn"
+                      onClick={() =>
+                        setSettlementPage((prev) =>
+                          Math.min(prev + 1, totalSettlementPages),
+                        )
+                      }
+                      disabled={settlementPage === totalSettlementPages}
+                    >
+                      Următorul »
+                    </button>
+                  </div>
+                )}
                 <button
                   className="btn-primary"
                   onClick={handleSaveAssignment}
