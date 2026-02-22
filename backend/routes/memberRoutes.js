@@ -42,17 +42,15 @@ const uploadSinglePhoto = (req, res, next) => {
     next();
   });
 };
-// All member routes require authentication
-router.use(protect);
 
-router.route("/").get(getAllMembers).post(createMember);
+router.route("/").get(getAllMembers).post(protect, createMember);
 
 router.get("/:id/photo", getMemberPhoto);
 
 router
   .route("/:id")
   .get(getMember)
-  .patch(uploadSinglePhoto, updateMember)
-  .delete(deleteMember);
+  .patch(protect, uploadSinglePhoto, updateMember)
+  .delete(protect, deleteMember);
 
 export default router;

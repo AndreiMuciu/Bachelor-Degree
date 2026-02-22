@@ -10,14 +10,11 @@ import { protect } from "./../controllers/authController.js";
 
 const router = express.Router();
 
-// All coordinate routes require authentication
-router.use(protect);
-
-router.route("/").get(getAllCoordinates).post(createCoordinates);
+router.route("/").get(getAllCoordinates).post(protect, createCoordinates);
 router
   .route(":id")
   .get(getCoordinates)
-  .patch(updateCoordinates)
-  .delete(deleteCoordinates);
+  .patch(protect, updateCoordinates)
+  .delete(protect, deleteCoordinates);
 
 export default router;

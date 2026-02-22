@@ -10,17 +10,15 @@ import { protect, restrictTo } from "./../controllers/authController.js";
 
 const router = express.Router();
 
-router.use(protect);
-
 router
   .route("/")
   .get(getAllSettlements)
-  .post(restrictTo("admin"), createSettlement);
+  .post(protect, restrictTo("admin"), createSettlement);
 
 router
   .route("/:id")
   .get(getSettlement)
-  .patch(updateSettlement)
-  .delete(deleteSettlement);
+  .patch(protect, updateSettlement)
+  .delete(protect, deleteSettlement);
 
 export default router;

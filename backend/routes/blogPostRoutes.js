@@ -10,15 +10,12 @@ import { protect } from "./../controllers/authController.js";
 
 const router = express.Router();
 
-// All blog post routes require authentication
-router.use(protect);
-
-router.route("/").get(getAllBlogPosts).post(createBlogPost);
+router.route("/").get(getAllBlogPosts).post(protect, createBlogPost);
 
 router
   .route(":id")
   .get(getBlogPost)
-  .patch(updateBlogPost)
-  .delete(deleteBlogPost);
+  .patch(protect, updateBlogPost)
+  .delete(protect, deleteBlogPost);
 
 export default router;
