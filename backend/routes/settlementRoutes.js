@@ -17,7 +17,7 @@ router
 
 router
   .route("/:id")
-  .get(getSettlement)
+  .get(protect, getSettlement)
   .patch(protect, updateSettlement)
   .delete(protect, deleteSettlement);
 

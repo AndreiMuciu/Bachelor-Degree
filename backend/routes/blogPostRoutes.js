@@ -13,7 +13,7 @@ const router = express.Router();
 router.route("/").get(getAllBlogPosts).post(protect, createBlogPost);
 
 router
-  .route(":id")
+  .route("/:id")
   .get(getBlogPost)
   .patch(protect, updateBlogPost)
   .delete(protect, deleteBlogPost);
