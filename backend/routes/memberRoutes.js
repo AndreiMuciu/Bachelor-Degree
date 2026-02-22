@@ -8,6 +8,7 @@ import {
   deleteMember,
   getMemberPhoto,
 } from "./../controllers/memberController.js";
+import { protect } from "./../controllers/authController.js";
 
 const router = express.Router();
 
@@ -41,6 +42,8 @@ const uploadSinglePhoto = (req, res, next) => {
     next();
   });
 };
+// All member routes require authentication
+router.use(protect);
 
 router.route("/").get(getAllMembers).post(createMember);
 

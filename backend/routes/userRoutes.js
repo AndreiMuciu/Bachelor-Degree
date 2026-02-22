@@ -7,11 +7,14 @@ import {
   deleteUser,
   getMe,
 } from "./../controllers/userController.js";
-import { protect } from "./../controllers/authController.js";
+import { protect, restrictTo } from "./../controllers/authController.js";
 
 const router = express.Router();
 
 router.get("/me", protect, getMe);
+
+// All routes below this point require the user to be logged in as admin
+router.use(protect, restrictTo("admin"));
 
 router.route("/").get(getAllUsers).post(createUser);
 
