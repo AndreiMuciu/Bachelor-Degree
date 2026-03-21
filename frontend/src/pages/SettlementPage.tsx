@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import {
   MapContainer,
   TileLayer,
@@ -15,6 +15,7 @@ import {
   memberAPI,
   n8nAPI,
   coordinatesAPI,
+  adminAPI,
 } from "../services/api";
 import type {
   Settlement,
@@ -24,6 +25,7 @@ import type {
   Coordinate,
 } from "../types";
 import "../styles/Settlement.css";
+import { useAuth } from "../contexts/AuthContext";
 
 // Fix pentru iconițele Leaflet
 import icon from "leaflet/dist/images/marker-icon.png";
@@ -128,6 +130,8 @@ const componentTypes = [
 
 const SettlementPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [settlement, setSettlement] = useState<Settlement | null>(null);
   const [loading, setLoading] = useState(true);
   const [components, setComponents] = useState<WebsiteComponent[]>([]);
@@ -175,6 +179,75 @@ const SettlementPage: React.FC = () => {
     message: string;
     type: "success" | "error" | "info";
   }>({ show: false, message: "", type: "success" });
+
+  const confirmActionRef = useRef<null | (() => Promise<void> | void)>(null);
+  const [isConfirmSubmitting, setIsConfirmSubmitting] = useState(false);
+  const [confirmModal, setConfirmModal] = useState<{
+    open: boolean;
+    title: string;
+    message: string;
+    confirmLabel: string;
+    cancelLabel: string;
+    confirmVariant: "danger" | "primary";
+  }>({
+    open: false,
+    title: "Confirmare",
+    message: "",
+    confirmLabel: "Confirmă",
+    cancelLabel: "Anulează",
+    confirmVariant: "primary",
+  });
+
+  const closeConfirmModal = useCallback(() => {
+    setConfirmModal((prev) => ({ ...prev, open: false }));
+    confirmActionRef.current = null;
+    setIsConfirmSubmitting(false);
+  }, []);
+
+  const openConfirmModal = useCallback(
+    (
+      config: {
+        title: string;
+        message: string;
+        confirmLabel?: string;
+        cancelLabel?: string;
+        confirmVariant?: "danger" | "primary";
+      },
+      action: () => Promise<void> | void,
+    ) => {
+      confirmActionRef.current = action;
+      setConfirmModal({
+        open: true,
+        title: config.title,
+        message: config.message,
+        confirmLabel: config.confirmLabel ?? "Confirmă",
+        cancelLabel: config.cancelLabel ?? "Anulează",
+        confirmVariant: config.confirmVariant ?? "primary",
+      });
+    },
+    [],
+  );
+
+  const handleConfirmProceed = useCallback(async () => {
+    if (!confirmActionRef.current || isConfirmSubmitting) return;
+    try {
+      setIsConfirmSubmitting(true);
+      await confirmActionRef.current();
+      closeConfirmModal();
+    } catch (error) {
+      console.error("Error executing confirm action:", error);
+      closeConfirmModal();
+    }
+  }, [closeConfirmModal, isConfirmSubmitting]);
+
+  useEffect(() => {
+    if (!confirmModal.open) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeConfirmModal();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [confirmModal.open, closeConfirmModal]);
 
   // Cache keys for localStorage
   const getCacheKey = (settlementId: string) => `preview_cache_${settlementId}`;
@@ -421,17 +494,25 @@ const SettlementPage: React.FC = () => {
     }
   };
 
-  const handleDeleteCoordinate = async (coordId: string) => {
-    if (!confirm("Ești sigur că vrei să ștergi acest punct?")) return;
-
-    try {
-      await coordinatesAPI.delete(coordId);
-      await fetchCoordinates();
-      showNotification("🗑️ Punct șters cu succes!", "success");
-    } catch (error) {
-      console.error("Error deleting coordinate:", error);
-      showNotification("❌ Eroare la ștergerea punctului!", "error");
-    }
+  const handleDeleteCoordinate = (coordId: string) => {
+    openConfirmModal(
+      {
+        title: "Șterge punct",
+        message: "Ești sigur că vrei să ștergi acest punct?",
+        confirmLabel: "Șterge",
+        confirmVariant: "danger",
+      },
+      async () => {
+        try {
+          await coordinatesAPI.delete(coordId);
+          await fetchCoordinates();
+          showNotification("🗑️ Punct șters cu succes!", "success");
+        } catch (error) {
+          console.error("Error deleting coordinate:", error);
+          showNotification("❌ Eroare la ștergerea punctului!", "error");
+        }
+      },
+    );
   };
 
   const handleCreateBlogPost = async (e: React.FormEvent) => {
@@ -450,17 +531,25 @@ const SettlementPage: React.FC = () => {
     }
   };
 
-  const handleDeleteBlogPost = async (postId: string) => {
-    if (!confirm("Ești sigur că vrei să ștergi această postare?")) return;
-
-    try {
-      await blogPostAPI.delete(postId);
-      await fetchBlogPosts();
-      showNotification("🗑️ Postarea a fost ștearsă!", "success");
-    } catch (error) {
-      console.error("Error deleting blog post:", error);
-      showNotification("❌ Eroare la ștergerea postării!", "error");
-    }
+  const handleDeleteBlogPost = (postId: string) => {
+    openConfirmModal(
+      {
+        title: "Șterge postare",
+        message: "Ești sigur că vrei să ștergi această postare?",
+        confirmLabel: "Șterge",
+        confirmVariant: "danger",
+      },
+      async () => {
+        try {
+          await blogPostAPI.delete(postId);
+          await fetchBlogPosts();
+          showNotification("🗑️ Postarea a fost ștearsă!", "success");
+        } catch (error) {
+          console.error("Error deleting blog post:", error);
+          showNotification("❌ Eroare la ștergerea postării!", "error");
+        }
+      },
+    );
   };
 
   const handleCreateWebsite = () => {
@@ -634,64 +723,79 @@ const SettlementPage: React.FC = () => {
       return;
     }
 
-    setIsSaving(true);
-    showNotification("Se salvează site-ul...", "info");
+    const isUpdate = Boolean(settlement.active);
+    openConfirmModal(
+      {
+        title: isUpdate ? "Actualizează site" : "Creează site",
+        message: isUpdate
+          ? "Ești sigur că vrei să actualizezi site-ul?"
+          : "Ești sigur că vrei să creezi site-ul?",
+        confirmLabel: isUpdate ? "Actualizează" : "Creează",
+        confirmVariant: "primary",
+      },
+      async () => {
+        setIsSaving(true);
+        showNotification("Se salvează site-ul...", "info");
 
-    try {
-      // Check if there's a blog component
-      const hasBlog = components.some((c) => c.type === "blog");
-      const hasMembers = components.some((c) => c.type === "members");
+        try {
+          // Check if there's a blog component
+          const hasBlog = components.some((c) => c.type === "blog");
+          const hasMembers = components.some((c) => c.type === "members");
 
-      // Generate code files
-      const files = {
-        html: generateHTML(),
-        css: generateCSS(),
-        js: generateJS(),
-        // ALWAYS generate blog pages if there's a blog component, even with 0 posts
-        ...(hasBlog
-          ? {
-              blogHtml: generateBlogPage(),
-              postHtml: generatePostPage(),
-            }
-          : {}),
-        // ALWAYS generate members page if there's a members component
-        ...(hasMembers
-          ? {
-              membersHtml: generateMembersPage(),
-            }
-          : {}),
-      };
+          // Generate code files
+          const files = {
+            html: generateHTML(),
+            css: generateCSS(),
+            js: generateJS(),
+            // ALWAYS generate blog pages if there's a blog component, even with 0 posts
+            ...(hasBlog
+              ? {
+                  blogHtml: generateBlogPage(),
+                  postHtml: generatePostPage(),
+                }
+              : {}),
+            // ALWAYS generate members page if there's a members component
+            ...(hasMembers
+              ? {
+                  membersHtml: generateMembersPage(),
+                }
+              : {}),
+          };
 
-      console.log("Files being sent:", Object.keys(files));
-      console.log("Has members component:", hasMembers);
-      console.log("Members HTML length:", files.membersHtml?.length || 0);
+          console.log("Files being sent:", Object.keys(files));
+          console.log("Has members component:", hasMembers);
+          console.log("Members HTML length:", files.membersHtml?.length || 0);
 
-      // Check if site is already active
-      if (settlement.active) {
-        // Update existing site
-        const response = await n8nAPI.updateSite(id, files);
-        showNotification("🎉 Site actualizat cu succes!", "success");
-        console.log("Site updated:", response);
-      } else {
-        // Create new site
-        const response = await n8nAPI.createSite(id, files);
-        showNotification("🎉 Site creat cu succes!", "success");
-        console.log("Site created:", response);
+          // Check if site is already active
+          if (settlement.active) {
+            // Update existing site
+            const response = await n8nAPI.updateSite(id, files);
+            showNotification("🎉 Site actualizat cu succes!", "success");
+            console.log("Site updated:", response);
+          } else {
+            // Create new site
+            const response = await n8nAPI.createSite(id, files);
+            showNotification("🎉 Site creat cu succes!", "success");
+            console.log("Site created:", response);
 
-        // Update local settlement state to reflect active status
-        setSettlement({ ...settlement, active: true });
-      }
-    } catch (error: any) {
-      console.error("Error saving site:", error);
-      const errorMessage =
-        error.response?.data?.message || error.message || "Eroare necunoscută";
-      showNotification(
-        `❌ Eroare la salvarea site-ului: ${errorMessage}`,
-        "error",
-      );
-    } finally {
-      setIsSaving(false);
-    }
+            // Update local settlement state to reflect active status
+            setSettlement((prev) => (prev ? { ...prev, active: true } : prev));
+          }
+        } catch (error: any) {
+          console.error("Error saving site:", error);
+          const errorMessage =
+            error.response?.data?.message ||
+            error.message ||
+            "Eroare necunoscută";
+          showNotification(
+            `❌ Eroare la salvarea site-ului: ${errorMessage}`,
+            "error",
+          );
+        } finally {
+          setIsSaving(false);
+        }
+      },
+    );
   };
 
   // Generate HTML code
@@ -3678,6 +3782,51 @@ function initMap() {
         ? "768px"
         : "375px";
 
+  const slugify = (value: string) => {
+    return value
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9-]/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "");
+  };
+
+  const getSettlementSiteUrl = () => {
+    const baseDomain = "bachelordegree.tech";
+    const subdomain = `${slugify(settlement.name)}-${slugify(settlement.judet)}`;
+    return `https://${subdomain}.${baseDomain}`;
+  };
+
+  const handleDeleteSettlement = async () => {
+    if (!settlement?._id) return;
+
+    openConfirmModal(
+      {
+        title: "Șterge settlement",
+        message: "Sigur doriți să ștergeți acest settlement?",
+        confirmLabel: "Șterge",
+        confirmVariant: "danger",
+      },
+      async () => {
+        try {
+          setIsSaving(true);
+          await adminAPI.deleteSettlement(settlement._id);
+          navigate("/");
+        } catch (err: any) {
+          showNotification(
+            err.response?.data?.message || "Eroare la ștergerea settlementului",
+            "error",
+          );
+        } finally {
+          setIsSaving(false);
+        }
+      },
+    );
+  };
+
   return (
     <div className="settlement-page">
       <div className="settlement-header">
@@ -3689,57 +3838,100 @@ function initMap() {
             </p>
           </div>
           <div className="header-actions">
-            <Link to="/" className="btn-back">
-              ← Înapoi
-            </Link>
-            <Link to={`/settlement/${id}/blog`} className="btn-blog">
-              📰 Gestionează Blog
-            </Link>
-            <Link to={`/settlement/${id}/members`} className="btn-members">
-              👥 Gestionează Membrii
-            </Link>
-            {components.length > 0 && (
-              <>
+            <div className="header-actions-row">
+              <Link to="/" className="btn-back">
+                ← Înapoi
+              </Link>
+              <Link to={`/settlement/${id}/members`} className="btn-members">
+                👥 Gestionează Membrii
+              </Link>
+              <Link to={`/settlement/${id}/blog`} className="btn-blog">
+                📰 Gestionează Blog
+              </Link>
+              {components.length > 0 && (
                 <button
-                  className="btn-secondary"
+                  className="btn-reset"
                   onClick={() => {
-                    if (
-                      id &&
-                      confirm(
-                        "Ești sigur că vrei să ștergi cache-ul? Progresul nesalvat va fi pierdut.",
-                      )
-                    ) {
-                      clearCache(id);
-                      setComponents([]);
-                      setCustomCSS("");
-                    }
+                    if (!id) return;
+                    openConfirmModal(
+                      {
+                        title: "Resetează progresul",
+                        message:
+                          "Ești sigur că vrei să ștergi cache-ul? Progresul nesalvat va fi pierdut.",
+                        confirmLabel: "Resetează",
+                        confirmVariant: "danger",
+                      },
+                      () => {
+                        clearCache(id);
+                        setComponents([]);
+                        setCustomCSS("");
+                      },
+                    );
                   }}
                   title="Șterge cache-ul și începe de la zero"
                 >
                   🗑️ Resetează
                 </button>
-                <button
-                  className="btn-save"
-                  onClick={() => setShowStyleEditor(true)}
+              )}
+
+              {settlement.active ? (
+                <a
+                  className="btn-open-site active"
+                  href={getSettlementSiteUrl()}
+                  target="_blank"
+                  rel="noreferrer"
+                  title={getSettlementSiteUrl()}
                 >
-                  🎨 Editează CSS
-                </button>
-                <button className="btn-save" onClick={handleViewCode}>
-                  👁️ Vezi Cod
-                </button>
+                  🔗 Deschide Site
+                </a>
+              ) : (
                 <button
-                  className="btn-save"
-                  onClick={handleSaveSite}
+                  type="button"
+                  className="btn-open-site inactive"
+                  disabled
+                  title="Website-ul nu este activ"
+                >
+                  🔗 Deschide Site
+                </button>
+              )}
+            </div>
+
+            <div className="header-actions-row header-actions-row--secondary">
+              {components.length > 0 && (
+                <>
+                  <button
+                    className="btn-save"
+                    onClick={() => setShowStyleEditor(true)}
+                  >
+                    🎨 Editează CSS
+                  </button>
+                  <button className="btn-save" onClick={handleViewCode}>
+                    👁️ Vezi Cod
+                  </button>
+                  <button
+                    className="btn-save"
+                    onClick={handleSaveSite}
+                    disabled={isSaving}
+                  >
+                    {isSaving
+                      ? "Se salvează..."
+                      : settlement?.active
+                        ? "💾 Actualizează Site"
+                        : "💾 Salvează Site"}
+                  </button>
+                </>
+              )}
+
+              {user?.role === "admin" && (
+                <button
+                  className="btn-danger"
+                  onClick={handleDeleteSettlement}
                   disabled={isSaving}
                 >
-                  {isSaving
-                    ? "Se salvează..."
-                    : settlement?.active
-                      ? "💾 Actualizează Site"
-                      : "💾 Salvează Site"}
+                  🗑️ Șterge Settlement
                 </button>
-              </>
-            )}
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -4056,6 +4248,52 @@ function initMap() {
           </div>
         </div>
       </div>
+
+      {confirmModal.open && (
+        <div className="modal-overlay" onClick={closeConfirmModal}>
+          <div
+            className="modal-content confirm-modal"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="confirm-modal-title"
+          >
+            <div className="modal-header">
+              <h3 id="confirm-modal-title">{confirmModal.title}</h3>
+              <button className="btn-close" onClick={closeConfirmModal}>
+                ×
+              </button>
+            </div>
+            <div className="modal-body">
+              <p>{confirmModal.message}</p>
+            </div>
+            <div className="modal-footer">
+              <button
+                type="button"
+                className="btn-cancel"
+                onClick={closeConfirmModal}
+                disabled={isConfirmSubmitting}
+              >
+                {confirmModal.cancelLabel}
+              </button>
+              <button
+                type="button"
+                className={
+                  confirmModal.confirmVariant === "danger"
+                    ? "btn-danger"
+                    : "btn-save"
+                }
+                onClick={handleConfirmProceed}
+                disabled={isConfirmSubmitting}
+              >
+                {isConfirmSubmitting
+                  ? "Se procesează..."
+                  : confirmModal.confirmLabel}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>

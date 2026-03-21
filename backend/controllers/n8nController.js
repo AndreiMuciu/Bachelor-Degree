@@ -1,5 +1,67 @@
 import Settlement from "../models/settlementModel.js";
 
+const buildSiteName = (settlement) =>
+  `${settlement.name}-${settlement.judet.toUpperCase()}`;
+
+const parseN8nResponse = async (response) => {
+  const responseText = await response.text();
+  if (!responseText || responseText.trim().length === 0) {
+    return { status: "success" };
+  }
+
+  try {
+    return JSON.parse(responseText);
+  } catch {
+    return responseText;
+  }
+};
+
+const isN8nSuccess = (n8nResult) => {
+  return (
+    n8nResult === "success" ||
+    n8nResult === "suuccess" ||
+    n8nResult?.status === "success" ||
+    n8nResult?.status === "suuccess"
+  );
+};
+
+const callN8nDeleteSite = async ({ siteName }) => {
+  const n8nDeleteUrl = process.env.N8N_DELETE_SITE;
+  if (!n8nDeleteUrl) {
+    const error = new Error("N8N_DELETE_SITE URL not configured");
+    error.statusCode = 500;
+    throw error;
+  }
+
+  const n8nPayload = [{ name: siteName }];
+
+  const n8nResponse = await fetch(n8nDeleteUrl, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(n8nPayload),
+  });
+
+  if (!n8nResponse.ok) {
+    const details = await n8nResponse.text();
+    const error = new Error("Failed to delete site via n8n");
+    error.statusCode = 500;
+    error.details = details;
+    throw error;
+  }
+
+  const n8nResult = await parseN8nResponse(n8nResponse);
+  if (!isN8nSuccess(n8nResult)) {
+    const error = new Error("N8N did not return success status");
+    error.statusCode = 500;
+    error.details = n8nResult;
+    throw error;
+  }
+
+  return n8nResult;
+};
+
 /**
  * Create a site via n8n webhook
  * Expected request body:
@@ -33,7 +95,7 @@ export const createSite = async (req, res) => {
     const settlement = await Settlement.findById(settlementId);
     console.log(
       "Settlement found:",
-      settlement ? settlement.name : "NOT FOUND"
+      settlement ? settlement.name : "NOT FOUND",
     );
 
     if (!settlement) {
@@ -75,7 +137,7 @@ export const createSite = async (req, res) => {
     }
 
     const n8nPayload = {
-      name: `${settlement.name}-${settlement.judet.toUpperCase()}`,
+      name: buildSiteName(settlement),
       "files-content": filesContent,
     };
 
@@ -113,29 +175,10 @@ export const createSite = async (req, res) => {
       });
     }
 
-    // Read response as text first
-    const responseText = await n8nResponse.text();
-    console.log("N8N Response text:", responseText);
+    const n8nResult = await parseN8nResponse(n8nResponse);
+    console.log("N8N Result:", n8nResult);
 
-    let n8nResult;
-    try {
-      // Try to parse as JSON
-      n8nResult = JSON.parse(responseText);
-      console.log("N8N Result parsed as JSON:", n8nResult);
-    } catch (parseError) {
-      // If not JSON, use as plain text
-      console.log("N8N Result is plain text:", responseText);
-      n8nResult = responseText;
-    }
-
-    // Check if n8n returned success (also accept "suuccess" typo)
-    const isSuccess =
-      n8nResult === "success" ||
-      n8nResult === "suuccess" || // Accept typo from n8n
-      n8nResult.status === "success" ||
-      n8nResult.status === "suuccess";
-
-    if (!isSuccess) {
+    if (!isN8nSuccess(n8nResult)) {
       console.log("N8N did not return success:", n8nResult);
       return res.status(500).json({
         status: "error",
@@ -202,7 +245,7 @@ export const updateSite = async (req, res) => {
     const settlement = await Settlement.findById(settlementId);
     console.log(
       "Settlement found:",
-      settlement ? settlement.name : "NOT FOUND"
+      settlement ? settlement.name : "NOT FOUND",
     );
 
     if (!settlement) {
@@ -249,7 +292,7 @@ export const updateSite = async (req, res) => {
     }
 
     const n8nPayload = {
-      name: `${settlement.name}-${settlement.judet.toUpperCase()}`,
+      name: buildSiteName(settlement),
       "files-content": filesContent,
     };
 
@@ -290,29 +333,10 @@ export const updateSite = async (req, res) => {
       });
     }
 
-    // Read response as text first
-    const responseText = await n8nResponse.text();
-    console.log("N8N Update Response text:", responseText);
+    const n8nResult = await parseN8nResponse(n8nResponse);
+    console.log("N8N Update Result:", n8nResult);
 
-    let n8nResult;
-    try {
-      // Try to parse as JSON
-      n8nResult = JSON.parse(responseText);
-      console.log("N8N Update Result parsed as JSON:", n8nResult);
-    } catch (parseError) {
-      // If not JSON, use as plain text
-      console.log("N8N Update Result is plain text:", responseText);
-      n8nResult = responseText;
-    }
-
-    // Check if n8n returned success (also accept "suuccess" typo)
-    const isSuccess =
-      n8nResult === "success" ||
-      n8nResult === "suuccess" || // Accept typo from n8n
-      n8nResult.status === "success" ||
-      n8nResult.status === "suuccess";
-
-    if (!isSuccess) {
+    if (!isN8nSuccess(n8nResult)) {
       console.log("N8N did not return success:", n8nResult);
       return res.status(500).json({
         status: "error",
@@ -340,3 +364,12 @@ export const updateSite = async (req, res) => {
     });
   }
 };
+
+/**
+ * Delete a site via n8n webhook
+ * Expected request body:
+ * {
+ *   settlementId: "mongoId"
+ * }
+ */
+export { callN8nDeleteSite, buildSiteName };

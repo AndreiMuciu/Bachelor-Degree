@@ -1,11 +1,10 @@
 import Settlement from "../models/settlementModel.js";
-import {
-  updateOne,
-  getOne,
-  getAll,
-  deleteOne,
-  createOne,
-} from "./handleFactory.js";
+import Member from "../models/memberModel.js";
+import BlogPost from "../models/blogPostModel.js";
+import Coordinates from "../models/coordinatesModel.js";
+import { updateOne, getOne, getAll, createOne } from "./handleFactory.js";
+
+import { callN8nDeleteSite, buildSiteName } from "./n8nController.js";
 
 export const getAllSettlements = getAll(Settlement);
 
@@ -23,7 +22,7 @@ export const getSettlement = async (req, res, next) => {
     // Check permissions
     if (req.user.role !== "admin") {
       const isAssigned = req.user.settlements.some(
-        (settlementId) => settlementId.toString() === req.params.id
+        (settlementId) => settlementId.toString() === req.params.id,
       );
 
       if (!isAssigned) {
@@ -50,4 +49,43 @@ export const getSettlement = async (req, res, next) => {
 
 export const createSettlement = createOne(Settlement);
 export const updateSettlement = updateOne(Settlement);
-export const deleteSettlement = deleteOne(Settlement);
+
+export const deleteSettlement = async (req, res) => {
+  try {
+    const settlement = await Settlement.findById(req.params.id);
+
+    if (!settlement) {
+      return res.status(404).json({
+        status: "fail",
+        message: "No settlement found with that ID",
+      });
+    }
+
+    // Trigger n8n deletion only if the site is active
+    if (settlement.active) {
+      const siteName = buildSiteName(settlement);
+      await callN8nDeleteSite({ siteName });
+    }
+
+    // Cascade delete dependent data
+    const settlementId = settlement._id;
+    await Promise.all([
+      Member.deleteMany({ settlement: settlementId }),
+      BlogPost.deleteMany({ settlement: settlementId }),
+      Coordinates.deleteMany({ settlement: settlementId }),
+    ]);
+
+    await Settlement.findByIdAndDelete(req.params.id);
+
+    res.status(204).json({
+      status: "success",
+      data: null,
+    });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({
+      status: "error",
+      message: error.message,
+      details: error.details,
+    });
+  }
+};
