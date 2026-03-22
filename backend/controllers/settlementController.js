@@ -1,4 +1,5 @@
 import Settlement from "../models/settlementModel.js";
+import User from "../models/userModel.js";
 import Member from "../models/memberModel.js";
 import BlogPost from "../models/blogPostModel.js";
 import Coordinates from "../models/coordinatesModel.js";
@@ -70,6 +71,10 @@ export const deleteSettlement = async (req, res) => {
     // Cascade delete dependent data
     const settlementId = settlement._id;
     await Promise.all([
+      User.updateMany(
+        { settlements: settlementId },
+        { $pull: { settlements: settlementId } },
+      ),
       Member.deleteMany({ settlement: settlementId }),
       BlogPost.deleteMany({ settlement: settlementId }),
       Coordinates.deleteMany({ settlement: settlementId }),
