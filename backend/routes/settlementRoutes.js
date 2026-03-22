@@ -11,7 +11,10 @@ import { protect, restrictTo } from "./../controllers/authController.js";
 
 const router = express.Router();
 
-router.route("/").get(getAllSettlements).post(protect, createSettlement);
+router
+  .route("/")
+  .get(getAllSettlements)
+  .post(protect, restrictTo("admin"), createSettlement);
 
 router.patch("/:id/deactivate", protect, deactivateSettlementSite);
 
