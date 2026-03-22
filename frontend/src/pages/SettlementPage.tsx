@@ -378,7 +378,11 @@ const SettlementPage: React.FC = () => {
           id: `header-${Date.now()}`,
           type: "header",
           content: {
-            title: `Primăria ${settlement?.name || ""}`,
+            title: `Primăria ${
+              (settlement?.name ?? "").trim() ||
+              (settlement?.judet ?? "").trim() ||
+              ""
+            }`,
             links: [
               { text: "Acasă", url: "#" },
               { text: "Despre", url: "#" },
@@ -565,7 +569,11 @@ const SettlementPage: React.FC = () => {
           ...comp,
           content: {
             ...comp.content,
-            title: `Primăria ${settlement?.name || ""}`,
+            title: `Primăria ${
+              (settlement?.name ?? "").trim() ||
+              (settlement?.judet ?? "").trim() ||
+              ""
+            }`,
           },
         };
       }
@@ -867,6 +875,11 @@ const SettlementPage: React.FC = () => {
 
   // Generate HTML code
   const generateHTML = (faviconHref: string | null) => {
+    const settlementDisplayName =
+      (settlement?.name ?? "").trim() ||
+      (settlement?.judet ?? "").trim() ||
+      "Website";
+
     // Determine which sections exist for navigation
     const hasAbout = components.some((c) => c.type === "about");
     const hasContact = components.some((c) => c.type === "contact");
@@ -879,7 +892,7 @@ const SettlementPage: React.FC = () => {
           case "header":
             // Default header title with settlement name
             const headerTitle =
-              comp.content.title || `Primăria ${settlement?.name || ""}`;
+              comp.content.title || `Primăria ${settlementDisplayName}`;
             const headerSubtitle = "Pagina Oficială";
 
             // Build navigation links dynamically based on available sections
@@ -911,7 +924,7 @@ const SettlementPage: React.FC = () => {
             const heroSubtitle =
               comp.content.subtitle !== undefined
                 ? comp.content.subtitle
-                : `la ${settlement?.name || ""}`;
+                : `la ${settlementDisplayName}`;
             return `    <section class="hero ${comp.alignment}">
       <div class="layout-container">
         ${heroTitle ? `<h1>${heroTitle}</h1>` : ""}
@@ -991,7 +1004,7 @@ const SettlementPage: React.FC = () => {
           case "footer":
             return `    <footer class="footer ${comp.alignment}">
       <div class="layout-container">
-        <p>© 2025 ${settlement?.name}. Toate drepturile rezervate.</p>
+        <p>© 2025 ${settlementDisplayName}. Toate drepturile rezervate.</p>
       </div>
     </footer>`;
           default:
@@ -1005,7 +1018,7 @@ const SettlementPage: React.FC = () => {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${settlement?.name || "Website"}</title>
+  <title>${settlementDisplayName}</title>
     ${faviconHref ? `<link rel="icon" type="image/png" href="${faviconHref}">` : ""}
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="styles.css">
@@ -1020,12 +1033,17 @@ ${htmlContent}
 
   // Generate Blog Page HTML
   const generateMembersPage = (faviconHref: string | null) => {
+    const settlementDisplayName =
+      (settlement?.name ?? "").trim() ||
+      (settlement?.judet ?? "").trim() ||
+      "Website";
+
     return `<!DOCTYPE html>
 <html lang="ro">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Membrii - ${settlement?.name || "Website"}</title>
+    <title>Membrii - ${settlementDisplayName}</title>
     ${faviconHref ? `<link rel="icon" type="image/png" href="${faviconHref}">` : ""}
     <link rel="stylesheet" href="styles.css">
     <style>
@@ -1083,7 +1101,7 @@ ${htmlContent}
 <body>
     <header class="header center">
       <div class="layout-container">
-        <h1>Membrii - ${settlement?.name || "Website"}</h1>
+        <h1>Membrii - ${settlementDisplayName}</h1>
         <nav>
           <a href="index.html">Acasă</a>
         </nav>
@@ -1114,9 +1132,7 @@ ${htmlContent}
 
     <footer class="footer center">
       <div class="layout-container">
-        <p>&copy; ${new Date().getFullYear()} ${
-          settlement?.name || "Website"
-        }. Toate drepturile rezervate.</p>
+        <p>&copy; ${new Date().getFullYear()} ${settlementDisplayName}. Toate drepturile rezervate.</p>
       </div>
     </footer>
 
@@ -1126,12 +1142,17 @@ ${htmlContent}
   };
 
   const generateBlogPage = (faviconHref: string | null) => {
+    const settlementDisplayName =
+      (settlement?.name ?? "").trim() ||
+      (settlement?.judet ?? "").trim() ||
+      "Website";
+
     return `<!DOCTYPE html>
 <html lang="ro">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Blog - ${settlement?.name || "Website"}</title>
+    <title>Blog - ${settlementDisplayName}</title>
     ${faviconHref ? `<link rel="icon" type="image/png" href="${faviconHref}">` : ""}
     <link rel="stylesheet" href="styles.css">
     <style>
@@ -1174,7 +1195,7 @@ ${htmlContent}
 <body>
     <header class="header center">
       <div class="layout-container">
-        <h1>Blog - ${settlement?.name || "Website"}</h1>
+        <h1>Blog - ${settlementDisplayName}</h1>
         <nav>
           <a href="index.html">Acasă</a>
         </nav>
@@ -1205,7 +1226,7 @@ ${htmlContent}
 
     <footer class="footer center">
       <div class="layout-container">
-        <p>© 2025 ${settlement?.name}. Toate drepturile rezervate.</p>
+        <p>© 2025 ${settlementDisplayName}. Toate drepturile rezervate.</p>
       </div>
     </footer>
 
@@ -1216,12 +1237,17 @@ ${htmlContent}
 
   // Generate Individual Post Page HTML
   const generatePostPage = (faviconHref: string | null) => {
+    const settlementDisplayName =
+      (settlement?.name ?? "").trim() ||
+      (settlement?.judet ?? "").trim() ||
+      "Website";
+
     return `<!DOCTYPE html>
 <html lang="ro">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Postare - ${settlement?.name || "Website"}</title>
+    <title>Postare - ${settlementDisplayName}</title>
     ${faviconHref ? `<link rel="icon" type="image/png" href="${faviconHref}">` : ""}
     <link rel="stylesheet" href="styles.css">
     <style>
@@ -1332,9 +1358,7 @@ ${htmlContent}
             throw new Error('No post data found');
           }
           
-          document.title = (post.title || 'Post') + ' - ${
-            settlement?.name || "Website"
-          }';
+          document.title = (post.title || 'Post') + ' - ${settlementDisplayName}';
           
           document.getElementById('post-container').innerHTML = \`
             <div class="post-content">
@@ -1369,7 +1393,7 @@ ${htmlContent}
 <body>
     <header class="header center">
       <div class="layout-container">
-        <h1>${settlement?.name || "Website"}</h1>
+        <h1>${settlementDisplayName}</h1>
         <nav>
           <a href="index.html">Acasă</a>
           <a href="blog.html">Blog</a>
@@ -1387,7 +1411,7 @@ ${htmlContent}
 
     <footer class="footer center">
       <div class="layout-container">
-        <p>© 2025 ${settlement?.name}. Toate drepturile rezervate.</p>
+        <p>© 2025 ${settlementDisplayName}. Toate drepturile rezervate.</p>
       </div>
     </footer>
 </body>
@@ -3813,7 +3837,10 @@ function initMap() {
         return (
           <footer className={`preview-component footer ${alignmentClass}`}>
             <div className="layout-container">
-              <p>© 2025 {settlement?.name}. Toate drepturile rezervate.</p>
+              <p>
+                © 2025 {(settlement?.name ?? "").trim() || settlement?.judet}.
+                Toate drepturile rezervate.
+              </p>
             </div>
           </footer>
         );
