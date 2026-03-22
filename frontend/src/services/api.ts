@@ -90,6 +90,15 @@ export const settlementAPI = {
     );
     return response.data.data.data;
   },
+
+  deactivateSite: async (
+    id: string,
+  ): Promise<{ settlement: Settlement; n8nResponse: unknown }> => {
+    const response = await api.patch<{
+      data: { settlement: Settlement; n8nResponse: unknown };
+    }>(`/settlements/${id}/deactivate`);
+    return response.data.data;
+  },
 };
 
 // Blog Post endpoints

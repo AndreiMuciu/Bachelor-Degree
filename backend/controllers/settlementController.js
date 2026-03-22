@@ -51,6 +51,61 @@ export const getSettlement = async (req, res, next) => {
 export const createSettlement = createOne(Settlement);
 export const updateSettlement = updateOne(Settlement);
 
+export const deactivateSettlementSite = async (req, res) => {
+  try {
+    const settlement = await Settlement.findById(req.params.id);
+
+    if (!settlement) {
+      return res.status(404).json({
+        status: "fail",
+        message: "No settlement found with that ID",
+      });
+    }
+
+    // Check permissions (same rule as getSettlement)
+    if (req.user.role !== "admin") {
+      const isAssigned = req.user.settlements.some(
+        (settlementId) => settlementId.toString() === req.params.id,
+      );
+
+      if (!isAssigned) {
+        return res.status(403).json({
+          status: "fail",
+          message: "You do not have permission to access this settlement.",
+        });
+      }
+    }
+
+    if (!settlement.active) {
+      return res.status(400).json({
+        status: "fail",
+        message: "Settlement site is already inactive",
+      });
+    }
+
+    const siteName = buildSiteName(settlement);
+    const n8nResult = await callN8nDeleteSite({ siteName });
+
+    settlement.active = false;
+    await settlement.save();
+
+    res.status(200).json({
+      status: "success",
+      message: "Site deactivated successfully",
+      data: {
+        settlement,
+        n8nResponse: n8nResult,
+      },
+    });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({
+      status: "error",
+      message: error.message,
+      details: error.details,
+    });
+  }
+};
+
 export const deleteSettlement = async (req, res) => {
   try {
     const settlement = await Settlement.findById(req.params.id);

@@ -172,6 +172,7 @@ const SettlementPage: React.FC = () => {
   const [showStyleEditor, setShowStyleEditor] = useState(false);
   const [customCSS, setCustomCSS] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeactivating, setIsDeactivating] = useState(false);
   const [editingComponent, setEditingComponent] = useState<string | null>(null);
   const [editFormData, setEditFormData] = useState<any>({});
   const [notification, setNotification] = useState<{
@@ -179,6 +180,11 @@ const SettlementPage: React.FC = () => {
     message: string;
     type: "success" | "error" | "info";
   }>({ show: false, message: "", type: "success" });
+
+  const extractSettlementFromN8nResponse = (response: unknown) => {
+    const maybe = response as { data?: { settlement?: Settlement } };
+    return maybe?.data?.settlement ?? null;
+  };
 
   const confirmActionRef = useRef<null | (() => Promise<void> | void)>(null);
   const [isConfirmSubmitting, setIsConfirmSubmitting] = useState(false);
@@ -822,14 +828,25 @@ const SettlementPage: React.FC = () => {
             const response = await n8nAPI.updateSite(id, files);
             showNotification("🎉 Site actualizat cu succes!", "success");
             console.log("Site updated:", response);
+
+            const updatedSettlement =
+              extractSettlementFromN8nResponse(response);
+            if (updatedSettlement) setSettlement(updatedSettlement);
           } else {
             // Create new site
             const response = await n8nAPI.createSite(id, files);
             showNotification("🎉 Site creat cu succes!", "success");
             console.log("Site created:", response);
 
-            // Update local settlement state to reflect active status
-            setSettlement((prev) => (prev ? { ...prev, active: true } : prev));
+            const updatedSettlement =
+              extractSettlementFromN8nResponse(response);
+            if (updatedSettlement) {
+              setSettlement(updatedSettlement);
+            } else {
+              setSettlement((prev) =>
+                prev ? { ...prev, active: true } : prev,
+              );
+            }
           }
         } catch (error: any) {
           console.error("Error saving site:", error);
@@ -3881,6 +3898,45 @@ function initMap() {
     );
   };
 
+  const handleDeactivateSite = async () => {
+    if (!settlement?._id) return;
+    if (!settlement.active) {
+      showNotification("Website-ul este deja inactiv", "info");
+      return;
+    }
+
+    openConfirmModal(
+      {
+        title: "Dezactivează site",
+        message:
+          "Sigur doriți să dezactivați site-ul? Va fi scos de pe internet, dar datele settlement-ului rămân.",
+        confirmLabel: "Dezactivează",
+        confirmVariant: "danger",
+      },
+      async () => {
+        try {
+          setIsDeactivating(true);
+          showNotification("Se dezactivează site-ul...", "info");
+
+          const response = await settlementAPI.deactivateSite(settlement._id);
+          setSettlement(response.settlement);
+          showNotification("✅ Site dezactivat cu succes!", "success");
+        } catch (err: unknown) {
+          const axiosLikeError = err as {
+            response?: { data?: { message?: string } };
+          };
+          showNotification(
+            axiosLikeError.response?.data?.message ||
+              "Eroare la dezactivarea site-ului",
+            "error",
+          );
+        } finally {
+          setIsDeactivating(false);
+        }
+      },
+    );
+  };
+
   return (
     <div className="settlement-page">
       <div className="settlement-header">
@@ -3965,7 +4021,7 @@ function initMap() {
                   <button
                     className="btn-save"
                     onClick={handleSaveSite}
-                    disabled={isSaving}
+                    disabled={isSaving || isDeactivating}
                   >
                     {isSaving
                       ? "Se salvează..."
@@ -3976,11 +4032,24 @@ function initMap() {
                 </>
               )}
 
+              {settlement.active && (
+                <button
+                  className="btn-reset"
+                  onClick={handleDeactivateSite}
+                  disabled={isSaving || isDeactivating}
+                  title="Dezactivează site-ul (îl scoate de pe internet)"
+                >
+                  {isDeactivating
+                    ? "Se dezactivează..."
+                    : "⏹️ Dezactivează Site"}
+                </button>
+              )}
+
               {user?.role === "admin" && (
                 <button
                   className="btn-danger"
                   onClick={handleDeleteSettlement}
-                  disabled={isSaving}
+                  disabled={isSaving || isDeactivating}
                 >
                   🗑️ Șterge Settlement
                 </button>
