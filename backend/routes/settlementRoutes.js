@@ -21,7 +21,7 @@ router.patch("/:id/deactivate", protect, deactivateSettlementSite);
 router
   .route("/:id")
   .get(protect, getSettlement)
-  .patch(protect, updateSettlement)
+  .patch(protect, restrictTo("admin"), updateSettlement)
   .delete(protect, restrictTo("admin"), deleteSettlement);
 
 export default router;
