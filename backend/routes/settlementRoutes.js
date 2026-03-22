@@ -19,6 +19,6 @@ router
   .route("/:id")
   .get(protect, getSettlement)
   .patch(protect, updateSettlement)
-  .delete(protect, deleteSettlement);
+  .delete(protect, restrictTo("admin"), deleteSettlement);
 
 export default router;
