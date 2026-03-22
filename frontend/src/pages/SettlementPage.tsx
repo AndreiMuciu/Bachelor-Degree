@@ -4032,18 +4032,22 @@ function initMap() {
                 </>
               )}
 
-              {settlement.active && (
-                <button
-                  className="btn-reset"
-                  onClick={handleDeactivateSite}
-                  disabled={isSaving || isDeactivating}
-                  title="Dezactivează site-ul (îl scoate de pe internet)"
-                >
-                  {isDeactivating
-                    ? "Se dezactivează..."
-                    : "⏹️ Dezactivează Site"}
-                </button>
-              )}
+              <button
+                className="btn-reset"
+                onClick={handleDeactivateSite}
+                disabled={!settlement.active || isSaving || isDeactivating}
+                title={
+                  settlement.active
+                    ? "Dezactivează site-ul (îl scoate de pe internet)"
+                    : "Website-ul este deja inactiv"
+                }
+              >
+                {isDeactivating
+                  ? "Se dezactivează..."
+                  : settlement.active
+                    ? "⏹️ Dezactivează Site"
+                    : "⏹️ Site Dezactivat"}
+              </button>
 
               {user?.role === "admin" && (
                 <button

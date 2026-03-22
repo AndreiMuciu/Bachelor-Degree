@@ -236,6 +236,12 @@
   transform: translateY(-1px);
 }
 
+.btn-reset:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .btn-open-site {
   color: white;
   border: none;
