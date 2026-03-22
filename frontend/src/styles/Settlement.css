@@ -42,7 +42,7 @@
 
 .header-actions-row {
   display: flex;
-  gap: 12px;
+  gap: 30px;
   align-items: center;
   flex-wrap: wrap;
   justify-content: flex-start;
@@ -50,7 +50,7 @@
 }
 
 .header-actions-row--secondary {
-  gap: 47px;
+  gap: 12px;
 }
 
 .header-actions-row a,
