@@ -24,7 +24,7 @@ const Dashboard: React.FC = () => {
     ? user.settlements.filter((settlement) => {
         const query = searchQuery.toLowerCase();
         return (
-          settlement.name.toLowerCase().includes(query) ||
+          (settlement.name ?? "").toLowerCase().includes(query) ||
           settlement.judet.toLowerCase().includes(query)
         );
       })

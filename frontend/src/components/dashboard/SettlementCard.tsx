@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 
 interface Settlement {
   _id: string;
-  name: string;
+  name?: string;
   judet: string;
   active: boolean;
 }
@@ -15,7 +15,9 @@ interface SettlementCardProps {
 const SettlementCard: React.FC<SettlementCardProps> = ({ settlement }) => {
   return (
     <Link to={`/settlement/${settlement._id}`} className="settlement-card">
-      <h3 className="settlement-name">{settlement.name}</h3>
+      <h3 className="settlement-name">
+        {(settlement.name ?? "").trim() || settlement.judet}
+      </h3>
       <p className="settlement-location">📍 {settlement.judet}</p>
       <span
         className={`settlement-status ${

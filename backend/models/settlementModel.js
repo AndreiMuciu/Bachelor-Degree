@@ -3,11 +3,13 @@ import mongoose from "mongoose";
 const settlementSchema = new mongoose.Schema({
   name: {
     type: String,
-    required: [true, "A settlement must have a name"],
+    required: false,
+    trim: true,
   },
   judet: {
     type: String,
     required: [true, "A settlement must have a judet"],
+    trim: true,
   },
   lat: {
     type: Number,

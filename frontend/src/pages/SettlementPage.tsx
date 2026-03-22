@@ -3867,7 +3867,11 @@ function initMap() {
 
   const getSettlementSiteUrl = () => {
     const baseDomain = "bachelordegree.tech";
-    const subdomain = `${slugify(settlement.name)}-${slugify(settlement.judet)}`;
+    const name = (settlement.name ?? "").trim();
+    const judet = (settlement.judet ?? "").trim();
+    const subdomain = name
+      ? `${slugify(name)}-${slugify(judet)}`
+      : `${slugify(judet)}`;
     return `https://${subdomain}.${baseDomain}`;
   };
 
@@ -3942,7 +3946,7 @@ function initMap() {
       <div className="settlement-header">
         <div className="settlement-header-content">
           <div className="settlement-info">
-            <h1>{settlement.name}</h1>
+            <h1>{(settlement.name ?? "").trim() || settlement.judet}</h1>
             <p>
               {settlement.judet} • Lat: {settlement.lat}, Lng: {settlement.lng}
             </p>

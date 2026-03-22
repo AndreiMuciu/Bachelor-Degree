@@ -9,7 +9,7 @@ export interface User {
 
 export interface Settlement {
   _id: string;
-  name: string;
+  name?: string;
   judet: string;
   lat: number;
   lng: number;

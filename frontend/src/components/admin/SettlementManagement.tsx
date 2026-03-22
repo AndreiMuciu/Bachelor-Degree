@@ -49,18 +49,37 @@ const SettlementManagement: React.FC<SettlementManagementProps> = ({
     setError("");
     setSuccess("");
 
-    if (!formData.name || !formData.judet || !formData.lat || !formData.lng) {
-      setError("Toate câmpurile sunt obligatorii");
+    if (!formData.judet || !formData.lat || !formData.lng) {
+      setError("Județul, latitudinea și longitudinea sunt obligatorii");
       return;
+    }
+
+    const payload: {
+      name?: string;
+      judet: string;
+      lat: number;
+      lng: number;
+    } = {
+      judet: formData.judet,
+      lat: formData.lat,
+      lng: formData.lng,
+    };
+
+    const trimmedName = formData.name.trim();
+    if (trimmedName) {
+      payload.name = trimmedName;
+    } else if (editingSettlement) {
+      // Permite transformarea într-o filială județeană prin ștergerea numelui
+      payload.name = "";
     }
 
     try {
       setLoading(true);
       if (editingSettlement) {
-        await adminAPI.updateSettlement(editingSettlement._id, formData);
+        await adminAPI.updateSettlement(editingSettlement._id, payload);
         setSuccess("Settlement actualizat cu succes!");
       } else {
-        await adminAPI.createSettlement(formData);
+        await adminAPI.createSettlement(payload);
         setSuccess("Settlement creat cu succes!");
       }
       setFormData({ name: "", judet: "", lat: 0, lng: 0 });
@@ -80,7 +99,7 @@ const SettlementManagement: React.FC<SettlementManagementProps> = ({
   const handleEdit = (settlement: Settlement) => {
     setEditingSettlement(settlement);
     setFormData({
-      name: settlement.name,
+      name: settlement.name ?? "",
       judet: settlement.judet,
       lat: settlement.lat,
       lng: settlement.lng,
@@ -147,7 +166,7 @@ const SettlementManagement: React.FC<SettlementManagementProps> = ({
           <form onSubmit={handleSubmit}>
             <div className="form-row">
               <div className="form-group">
-                <label htmlFor="name">Nume Localitate:</label>
+                <label htmlFor="name">Nume Localitate (opțional):</label>
                 <input
                   type="text"
                   id="name"
@@ -156,7 +175,6 @@ const SettlementManagement: React.FC<SettlementManagementProps> = ({
                     setFormData({ ...formData, name: e.target.value })
                   }
                   placeholder="ex: București"
-                  required
                 />
               </div>
               <div className="form-group">
@@ -252,7 +270,7 @@ const SettlementManagement: React.FC<SettlementManagementProps> = ({
                 <tbody>
                   {currentSettlements.map((settlement) => (
                     <tr key={settlement._id}>
-                      <td>{settlement.name}</td>
+                      <td>{(settlement.name ?? "").trim() || "-"}</td>
                       <td>{settlement.judet}</td>
                       <td>{settlement.lat.toFixed(4)}</td>
                       <td>{settlement.lng.toFixed(4)}</td>

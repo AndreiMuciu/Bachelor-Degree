@@ -345,7 +345,7 @@ export const adminAPI = {
 
   // Settlement management
   createSettlement: async (settlementData: {
-    name: string;
+    name?: string;
     judet: string;
     lat: number;
     lng: number;

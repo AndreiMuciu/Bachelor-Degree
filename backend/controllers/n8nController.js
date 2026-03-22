@@ -1,7 +1,15 @@
 import Settlement from "../models/settlementModel.js";
 
-const buildSiteName = (settlement) =>
-  `${settlement.name}-${settlement.judet.toUpperCase()}`;
+const buildSiteName = (settlement) => {
+  const judet = settlement?.judet ? String(settlement.judet).toUpperCase() : "";
+  const name = settlement?.name ? String(settlement.name).trim() : "";
+
+  // Pentru filiale județene (fără localitate), nu prefixăm cu `name-`.
+  if (!name) return judet;
+  if (!judet) return name;
+
+  return `${name}-${judet}`;
+};
 
 const parseN8nResponse = async (response) => {
   const responseText = await response.text();

@@ -202,7 +202,9 @@ const UserSettlementAssignment: React.FC = () => {
                       onChange={() => handleSettlementToggle(settlement._id)}
                     />
                     <div className="settlement-checkbox-info">
-                      <div className="settlement-name">{settlement.name}</div>
+                      <div className="settlement-name">
+                        {(settlement.name ?? "").trim() || "-"}
+                      </div>
                       <div className="settlement-judet">{settlement.judet}</div>
                     </div>
                   </label>

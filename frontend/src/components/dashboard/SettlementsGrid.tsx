@@ -3,7 +3,7 @@ import SettlementCard from "./SettlementCard";
 
 interface Settlement {
   _id: string;
-  name: string;
+  name?: string;
   judet: string;
   active: boolean;
 }
