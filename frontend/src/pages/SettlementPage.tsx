@@ -746,15 +746,41 @@ const SettlementPage: React.FC = () => {
               reader.readAsDataURL(blob);
             });
 
+          const dataUrlToImage = (dataUrl: string): Promise<HTMLImageElement> =>
+            new Promise((resolve, reject) => {
+              const img = new Image();
+              img.onload = () => resolve(img);
+              img.onerror = () => reject(new Error("Failed to load image"));
+              img.src = dataUrl;
+            });
+
+          const resizePngDataUrl = async (
+            dataUrl: string,
+            size: number,
+          ): Promise<string> => {
+            const img = await dataUrlToImage(dataUrl);
+            const canvas = document.createElement("canvas");
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext("2d");
+            if (!ctx) return dataUrl;
+
+            ctx.clearRect(0, 0, size, size);
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = "high";
+            ctx.drawImage(img, 0, 0, size, size);
+
+            return canvas.toDataURL("image/png");
+          };
+
           const getSiteGenFaviconHref = async (): Promise<string | null> => {
             try {
-              const response = await fetch("/logo.png", {
-                cache: "force-cache",
-              });
+              const logoPath = `${import.meta.env.BASE_URL}logo.png`;
+              const response = await fetch(logoPath, { cache: "no-store" });
               if (!response.ok) return null;
               const blob = await response.blob();
               const dataUrl = await readBlobAsDataUrl(blob);
-              return dataUrl;
+              return await resizePngDataUrl(dataUrl, 32);
             } catch {
               return null;
             }
@@ -768,20 +794,20 @@ const SettlementPage: React.FC = () => {
 
           // Generate code files
           const files = {
-            html: generateHTML(faviconHref || "logo.png"),
+            html: generateHTML(faviconHref),
             css: generateCSS(),
             js: generateJS(),
             // ALWAYS generate blog pages if there's a blog component, even with 0 posts
             ...(hasBlog
               ? {
-                  blogHtml: generateBlogPage(faviconHref || "logo.png"),
-                  postHtml: generatePostPage(faviconHref || "logo.png"),
+                  blogHtml: generateBlogPage(faviconHref),
+                  postHtml: generatePostPage(faviconHref),
                 }
               : {}),
             // ALWAYS generate members page if there's a members component
             ...(hasMembers
               ? {
-                  membersHtml: generateMembersPage(faviconHref || "logo.png"),
+                  membersHtml: generateMembersPage(faviconHref),
                 }
               : {}),
           };
@@ -823,7 +849,7 @@ const SettlementPage: React.FC = () => {
   };
 
   // Generate HTML code
-  const generateHTML = (faviconHref: string = "logo.png") => {
+  const generateHTML = (faviconHref: string | null) => {
     // Determine which sections exist for navigation
     const hasAbout = components.some((c) => c.type === "about");
     const hasContact = components.some((c) => c.type === "contact");
@@ -963,7 +989,7 @@ const SettlementPage: React.FC = () => {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${settlement?.name || "Website"}</title>
-  <link rel="icon" type="image/png" href="${faviconHref}">
+    ${faviconHref ? `<link rel="icon" type="image/png" href="${faviconHref}">` : ""}
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -976,14 +1002,14 @@ ${htmlContent}
   };
 
   // Generate Blog Page HTML
-  const generateMembersPage = (faviconHref: string = "logo.png") => {
+  const generateMembersPage = (faviconHref: string | null) => {
     return `<!DOCTYPE html>
 <html lang="ro">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Membrii - ${settlement?.name || "Website"}</title>
-    <link rel="icon" type="image/png" href="${faviconHref}">
+    ${faviconHref ? `<link rel="icon" type="image/png" href="${faviconHref}">` : ""}
     <link rel="stylesheet" href="styles.css">
     <style>
       /* Additional members page specific styles */
@@ -1082,14 +1108,14 @@ ${htmlContent}
 </html>`;
   };
 
-  const generateBlogPage = (faviconHref: string = "logo.png") => {
+  const generateBlogPage = (faviconHref: string | null) => {
     return `<!DOCTYPE html>
 <html lang="ro">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Blog - ${settlement?.name || "Website"}</title>
-    <link rel="icon" type="image/png" href="${faviconHref}">
+    ${faviconHref ? `<link rel="icon" type="image/png" href="${faviconHref}">` : ""}
     <link rel="stylesheet" href="styles.css">
     <style>
       /* Additional blog page specific styles */
@@ -1172,14 +1198,14 @@ ${htmlContent}
   };
 
   // Generate Individual Post Page HTML
-  const generatePostPage = (faviconHref: string = "logo.png") => {
+  const generatePostPage = (faviconHref: string | null) => {
     return `<!DOCTYPE html>
 <html lang="ro">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Postare - ${settlement?.name || "Website"}</title>
-    <link rel="icon" type="image/png" href="${faviconHref}">
+    ${faviconHref ? `<link rel="icon" type="image/png" href="${faviconHref}">` : ""}
     <link rel="stylesheet" href="styles.css">
     <style>
       .post-page {
@@ -4405,7 +4431,7 @@ function initMap() {
               <div className="code-content">
                 <pre>
                   <code>
-                    {activeCodeTab === "html" && generateHTML()}
+                    {activeCodeTab === "html" && generateHTML(null)}
                     {activeCodeTab === "css" && generateCSS()}
                     {activeCodeTab === "js" && generateJS()}
                   </code>
@@ -4417,7 +4443,7 @@ function initMap() {
                   onClick={() => {
                     const code =
                       activeCodeTab === "html"
-                        ? generateHTML()
+                        ? generateHTML(null)
                         : activeCodeTab === "css"
                           ? generateCSS()
                           : generateJS();
