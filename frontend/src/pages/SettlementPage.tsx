@@ -738,26 +738,50 @@ const SettlementPage: React.FC = () => {
         showNotification("Se salvează site-ul...", "info");
 
         try {
+          const readBlobAsDataUrl = (blob: Blob): Promise<string> =>
+            new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(String(reader.result));
+              reader.onerror = () => reject(new Error("Failed to read file"));
+              reader.readAsDataURL(blob);
+            });
+
+          const getSiteGenFaviconHref = async (): Promise<string | null> => {
+            try {
+              const response = await fetch("/logo.png", {
+                cache: "force-cache",
+              });
+              if (!response.ok) return null;
+              const blob = await response.blob();
+              const dataUrl = await readBlobAsDataUrl(blob);
+              return dataUrl;
+            } catch {
+              return null;
+            }
+          };
+
+          const faviconHref = await getSiteGenFaviconHref();
+
           // Check if there's a blog component
           const hasBlog = components.some((c) => c.type === "blog");
           const hasMembers = components.some((c) => c.type === "members");
 
           // Generate code files
           const files = {
-            html: generateHTML(),
+            html: generateHTML(faviconHref || "logo.png"),
             css: generateCSS(),
             js: generateJS(),
             // ALWAYS generate blog pages if there's a blog component, even with 0 posts
             ...(hasBlog
               ? {
-                  blogHtml: generateBlogPage(),
-                  postHtml: generatePostPage(),
+                  blogHtml: generateBlogPage(faviconHref || "logo.png"),
+                  postHtml: generatePostPage(faviconHref || "logo.png"),
                 }
               : {}),
             // ALWAYS generate members page if there's a members component
             ...(hasMembers
               ? {
-                  membersHtml: generateMembersPage(),
+                  membersHtml: generateMembersPage(faviconHref || "logo.png"),
                 }
               : {}),
           };
@@ -799,7 +823,7 @@ const SettlementPage: React.FC = () => {
   };
 
   // Generate HTML code
-  const generateHTML = () => {
+  const generateHTML = (faviconHref: string = "logo.png") => {
     // Determine which sections exist for navigation
     const hasAbout = components.some((c) => c.type === "about");
     const hasContact = components.some((c) => c.type === "contact");
@@ -939,6 +963,7 @@ const SettlementPage: React.FC = () => {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${settlement?.name || "Website"}</title>
+  <link rel="icon" type="image/png" href="${faviconHref}">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -951,13 +976,14 @@ ${htmlContent}
   };
 
   // Generate Blog Page HTML
-  const generateMembersPage = () => {
+  const generateMembersPage = (faviconHref: string = "logo.png") => {
     return `<!DOCTYPE html>
 <html lang="ro">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Membrii - ${settlement?.name || "Website"}</title>
+    <link rel="icon" type="image/png" href="${faviconHref}">
     <link rel="stylesheet" href="styles.css">
     <style>
       /* Additional members page specific styles */
@@ -1056,13 +1082,14 @@ ${htmlContent}
 </html>`;
   };
 
-  const generateBlogPage = () => {
+  const generateBlogPage = (faviconHref: string = "logo.png") => {
     return `<!DOCTYPE html>
 <html lang="ro">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Blog - ${settlement?.name || "Website"}</title>
+    <link rel="icon" type="image/png" href="${faviconHref}">
     <link rel="stylesheet" href="styles.css">
     <style>
       /* Additional blog page specific styles */
@@ -1145,13 +1172,14 @@ ${htmlContent}
   };
 
   // Generate Individual Post Page HTML
-  const generatePostPage = () => {
+  const generatePostPage = (faviconHref: string = "logo.png") => {
     return `<!DOCTYPE html>
 <html lang="ro">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Postare - ${settlement?.name || "Website"}</title>
+    <link rel="icon" type="image/png" href="${faviconHref}">
     <link rel="stylesheet" href="styles.css">
     <style>
       .post-page {
