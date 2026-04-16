@@ -145,6 +145,9 @@ const SettlementPage: React.FC = () => {
   const [previewMode, setPreviewMode] = useState<
     "desktop" | "tablet" | "mobile"
   >("desktop");
+  const [previewView, setPreviewView] = useState<"builder" | "generated">(
+    "generated",
+  );
   const [showCodeModal, setShowCodeModal] = useState(false);
   const [activeCodeTab, setActiveCodeTab] = useState<"html" | "css" | "js">(
     "html",
@@ -2491,28 +2494,57 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Add animation on scroll
-    const observerOptions = {
-        threshold: 0.1,
-        rootMargin: '0px 0px -50px 0px'
-    };
-    
-    const observer = new IntersectionObserver(function(entries) {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.style.opacity = '1';
-                entry.target.style.transform = 'translateY(0)';
-            }
-        });
-    }, observerOptions);
-    
-    // Observe all sections
     const sections = document.querySelectorAll('section');
-    sections.forEach(section => {
+
+    function revealSection(section) {
+        section.style.opacity = '1';
+        section.style.transform = 'translateY(0)';
+    }
+
+    function hideSection(section) {
         section.style.opacity = '0';
         section.style.transform = 'translateY(20px)';
         section.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
-        observer.observe(section);
-    });
+    }
+
+    function revealAboveFold() {
+        sections.forEach(section => {
+            const rect = section.getBoundingClientRect();
+            if (rect.top < window.innerHeight && rect.bottom > 0) {
+                revealSection(section);
+            }
+        });
+    }
+
+    if (typeof IntersectionObserver === 'function') {
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver(function(entries) {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    revealSection(entry.target);
+                }
+            });
+        }, observerOptions);
+
+        sections.forEach(section => {
+            hideSection(section);
+            observer.observe(section);
+        });
+
+        // Fallback for environments where IntersectionObserver callbacks don't fire reliably.
+        setTimeout(revealAboveFold, 50);
+        setTimeout(revealAboveFold, 500);
+    } else {
+        // No IntersectionObserver support -> don't hide content.
+        sections.forEach(section => {
+            section.style.transition = 'none';
+            revealSection(section);
+        });
+    }
     ${
       hasBlog
         ? `
@@ -4740,6 +4772,111 @@ function initMap() {
         ? "768px"
         : "375px";
 
+  const buildGeneratedPreviewSrcDoc = () => {
+    const css = generateCSS().replace(/<\/style>/gi, "<\\/style>");
+    const js = generateJS().replace(/<\/script>/gi, "<\\/script>");
+
+    const safeJson = (value: unknown) =>
+      JSON.stringify(value ?? null).replace(/</g, "\\u003c");
+
+    const publishedEvents = events.filter((ev) => ev.status === "published");
+
+    const stubScript = String.raw`
+(function () {
+  const BLOG_POSTS = ${safeJson(blogPosts)};
+  const MEMBERS = ${safeJson(members)};
+  const COORDINATES = ${safeJson(coordinates)};
+  const EVENTS = ${safeJson(publishedEvents)};
+
+  const realFetch = window.fetch ? window.fetch.bind(window) : null;
+
+  function jsonResponse(payload, status) {
+    return new Response(JSON.stringify(payload), {
+      status: status || 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  function okList(list) {
+    const arr = Array.isArray(list) ? list : [];
+    return { status: 'success', results: arr.length, data: { data: arr } };
+  }
+
+  function okSingle(doc) {
+    return { status: 'success', data: { data: doc } };
+  }
+
+  window.fetch = function (input, init) {
+    try {
+      const urlStr = typeof input === 'string' ? input : (input && input.url) ? input.url : '';
+
+      if (urlStr.indexOf('/events/public') !== -1) {
+        return Promise.resolve(jsonResponse(okList(EVENTS)));
+      }
+
+      if (urlStr.indexOf('/blog-posts?') !== -1) {
+        return Promise.resolve(jsonResponse(okList(BLOG_POSTS)));
+      }
+      const blogMatch = urlStr.match(/\/blog-posts\/([a-f0-9]{24})(\b|\?|#|\/)/i);
+      if (blogMatch) {
+        const id = blogMatch[1];
+        const doc = Array.isArray(BLOG_POSTS) ? BLOG_POSTS.find(function (p) { return p && p._id === id; }) : null;
+        if (!doc) return Promise.resolve(jsonResponse({ status: 'fail', message: 'Not found' }, 404));
+        return Promise.resolve(jsonResponse(okSingle(doc)));
+      }
+
+      if (urlStr.indexOf('/members?') !== -1) {
+        return Promise.resolve(jsonResponse(okList(MEMBERS)));
+      }
+      const memberMatch = urlStr.match(/\/members\/([a-f0-9]{24})(\b|\?|#|\/)/i);
+      if (memberMatch && urlStr.indexOf('/photo') === -1) {
+        const id = memberMatch[1];
+        const doc = Array.isArray(MEMBERS) ? MEMBERS.find(function (m) { return m && m._id === id; }) : null;
+        if (!doc) return Promise.resolve(jsonResponse({ status: 'fail', message: 'Not found' }, 404));
+        return Promise.resolve(jsonResponse(okSingle(doc)));
+      }
+
+      if (urlStr.indexOf('/coordinates?') !== -1) {
+        return Promise.resolve(jsonResponse(okList(COORDINATES)));
+      }
+    } catch {
+      // fall through
+    }
+
+    return realFetch
+      ? realFetch(input, init)
+      : Promise.reject(new Error('fetch unavailable'));
+  };
+
+  // Keep preview stable: don't navigate to other html pages in this iframe.
+  document.addEventListener('click', function (e) {
+    const t = e.target;
+    const el = t && t.nodeType === 1 ? t : (t && t.parentElement) ? t.parentElement : null;
+    const a = el && el.closest ? el.closest('a') : null;
+    if (!a) return;
+    const href = String(a.getAttribute('href') || '').trim();
+    if (!href) return;
+    if (href.indexOf('#') === 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+  }, true);
+})();
+    `.trim();
+
+    let html = generateHTML(null);
+    html = html.replace(
+      '    <link rel="stylesheet" href="styles.css">',
+      `    <style>${css}</style>`,
+    );
+
+    html = html.replace(
+      '    <script src="script.js"></script>',
+      `    <script>${stubScript}</script>\n    <script>${js}</script>`,
+    );
+
+    return html;
+  };
+
   const slugify = (value: string) => {
     return value
       .normalize("NFD")
@@ -5219,6 +5356,27 @@ function initMap() {
             <h2>Preview</h2>
             <div className="preview-modes">
               <button
+                className={`btn-mode ${previewView === "builder" ? "active" : ""}`}
+                onClick={() => setPreviewView("builder")}
+              >
+                🧱 Builder
+              </button>
+              <button
+                className={`btn-mode ${
+                  previewView === "generated" ? "active" : ""
+                }`}
+                onClick={() => setPreviewView("generated")}
+                disabled={components.length === 0}
+                title={
+                  components.length === 0
+                    ? "Adaugă componente ca să vezi site-ul generat"
+                    : "Preview identic cu site-ul generat"
+                }
+              >
+                🌐 Site
+              </button>
+
+              <button
                 className={`btn-mode ${
                   previewMode === "desktop" ? "active" : ""
                 }`}
@@ -5248,13 +5406,30 @@ function initMap() {
             className="preview-content"
             style={{ maxWidth: previewWidth, margin: "0 auto" }}
           >
-            {customCSS && <style>{customCSS}</style>}
             {components.length > 0 ? (
-              components.map((component) => (
-                <div key={component.id}>
-                  {renderComponentPreview(component)}
-                </div>
-              ))
+              previewView === "generated" ? (
+                <iframe
+                  title="Preview site generat"
+                  sandbox="allow-scripts"
+                  srcDoc={buildGeneratedPreviewSrcDoc()}
+                  style={{
+                    width: "100%",
+                    height: "900px",
+                    border: 0,
+                    borderRadius: "12px",
+                    background: "white",
+                  }}
+                />
+              ) : (
+                <>
+                  {customCSS && <style>{customCSS}</style>}
+                  {components.map((component) => (
+                    <div key={component.id}>
+                      {renderComponentPreview(component)}
+                    </div>
+                  ))}
+                </>
+              )
             ) : (
               <div
                 style={{
