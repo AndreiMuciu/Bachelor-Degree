@@ -5014,27 +5014,6 @@ function initMap() {
                   🗑️ Resetează
                 </button>
               )}
-
-              {settlement.active ? (
-                <a
-                  className="btn-open-site active"
-                  href={getSettlementSiteUrl()}
-                  target="_blank"
-                  rel="noreferrer"
-                  title={getSettlementSiteUrl()}
-                >
-                  🔗 Deschide Site
-                </a>
-              ) : (
-                <button
-                  type="button"
-                  className="btn-open-site inactive"
-                  disabled
-                  title="Website-ul nu este activ"
-                >
-                  🔗 Deschide Site
-                </button>
-              )}
             </div>
 
             <div className="header-actions-row header-actions-row--secondary">
@@ -5060,6 +5039,27 @@ function initMap() {
                         ? "💾 Actualizează Site"
                         : "💾 Salvează Site"}
                   </button>
+
+                  {settlement.active ? (
+                    <a
+                      className="btn-open-site active"
+                      href={getSettlementSiteUrl()}
+                      target="_blank"
+                      rel="noreferrer"
+                      title={getSettlementSiteUrl()}
+                    >
+                      🔗 Deschide Site
+                    </a>
+                  ) : (
+                    <button
+                      type="button"
+                      className="btn-open-site inactive"
+                      disabled
+                      title="Website-ul nu este activ"
+                    >
+                      🔗 Deschide Site
+                    </button>
+                  )}
                 </>
               )}
 
