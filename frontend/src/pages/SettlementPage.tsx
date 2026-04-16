@@ -13,6 +13,7 @@ import {
   settlementAPI,
   blogPostAPI,
   memberAPI,
+  eventAPI,
   n8nAPI,
   coordinatesAPI,
   adminAPI,
@@ -23,6 +24,7 @@ import type {
   BlogPost,
   Member,
   Coordinate,
+  Event,
 } from "../types";
 import "../styles/Settlement.css";
 import { useAuth } from "../contexts/AuthContext";
@@ -123,6 +125,7 @@ const componentTypes = [
   { type: "services", label: "Servicii", icon: "⚙️" },
   { type: "blog", label: "Blog", icon: "📰" },
   { type: "members", label: "Membri", icon: "👥" },
+  { type: "events", label: "Evenimente", icon: "📅" },
   { type: "map", label: "Hartă", icon: "🗺️" },
   { type: "contact", label: "Contact", icon: "📞" },
   { type: "footer", label: "Footer", icon: "📄" },
@@ -148,6 +151,7 @@ const SettlementPage: React.FC = () => {
   );
   const [showBlogModal, setShowBlogModal] = useState(false);
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
+  const [events, setEvents] = useState<Event[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [memberImageErrors, setMemberImageErrors] = useState<
     Record<string, boolean>
@@ -343,6 +347,7 @@ const SettlementPage: React.FC = () => {
 
         // Fetch blog posts for this settlement
         await fetchBlogPosts();
+        await fetchEvents();
         await fetchMembers();
         await fetchCoordinates();
       } catch (error) {
@@ -458,6 +463,21 @@ const SettlementPage: React.FC = () => {
       setMembers(sortedMembers);
     } catch (error) {
       console.error("Error fetching members:", error);
+    }
+  };
+
+  const fetchEvents = async () => {
+    if (!id) return;
+    try {
+      const eventsData = await eventAPI.getBySettlement(id);
+      const sortedEvents = [...eventsData].sort((a, b) => {
+        const dateCmp = (a.localDate || "").localeCompare(b.localDate || "");
+        if (dateCmp !== 0) return dateCmp;
+        return (a.startTime || "").localeCompare(b.startTime || "");
+      });
+      setEvents(sortedEvents);
+    } catch (error) {
+      console.error("Error fetching events:", error);
     }
   };
 
@@ -805,6 +825,7 @@ const SettlementPage: React.FC = () => {
           // Check if there's a blog component
           const hasBlog = components.some((c) => c.type === "blog");
           const hasMembers = components.some((c) => c.type === "members");
+          const hasEvents = components.some((c) => c.type === "events");
 
           // Generate code files
           const files = {
@@ -822,6 +843,11 @@ const SettlementPage: React.FC = () => {
             ...(hasMembers
               ? {
                   membersHtml: generateMembersPage(faviconHref),
+                }
+              : {}),
+            ...(hasEvents
+              ? {
+                  eventsHtml: generateEventsPage(faviconHref),
                 }
               : {}),
           };
@@ -885,6 +911,7 @@ const SettlementPage: React.FC = () => {
     const hasContact = components.some((c) => c.type === "contact");
     const hasBlog = components.some((c) => c.type === "blog");
     const hasMembers = components.some((c) => c.type === "members");
+    const hasEvents = components.some((c) => c.type === "events");
 
     const htmlContent = components
       .map((comp) => {
@@ -899,6 +926,8 @@ const SettlementPage: React.FC = () => {
             const navItems: string[] = [];
             if (hasAbout) navItems.push('<a href="#despre">Despre</a>');
             if (hasMembers) navItems.push('<a href="#membri">Membrii</a>');
+            if (hasEvents)
+              navItems.push('<a href="#evenimente">Evenimente</a>');
             if (hasBlog) navItems.push('<a href="#noutati">Noutăți</a>');
             if (hasContact) navItems.push('<a href="#contact">Contact</a>');
 
@@ -949,6 +978,35 @@ const SettlementPage: React.FC = () => {
       <div class="layout-container">
         ${servicesTitle ? `<h2>${servicesTitle}</h2>` : ""}
         <p>${comp.content.description || "Lista serviciilor..."}</p>
+      </div>
+    </section>`;
+          case "events":
+            const eventsTitle =
+              comp.content.title !== undefined
+                ? comp.content.title
+                : "Evenimente";
+
+            return `    <section class="events ${comp.alignment}" id="evenimente">
+      <div class="layout-container">
+        ${eventsTitle ? `<h2>${eventsTitle}</h2>` : ""}
+        <div class="events-calendar" aria-label="Calendar evenimente">
+          <div class="events-calendar-header">
+            <button class="events-nav-btn" id="events-prev-month" type="button" aria-label="Luna anterioară">←</button>
+            <div class="events-month-label" id="events-month-label"></div>
+            <button class="events-nav-btn" id="events-next-month" type="button" aria-label="Luna următoare">→</button>
+          </div>
+          <div class="events-weekdays">
+            <div>L</div><div>M</div><div>Mi</div><div>J</div><div>V</div><div>S</div><div>D</div>
+          </div>
+          <div class="events-days" id="events-days"></div>
+        </div>
+
+        <div class="events-panel">
+          <div class="loading-message" id="events-loading">Se încarcă evenimentele...</div>
+          <div class="events-selected-date" id="events-selected-date" style="display: none;"></div>
+          <div class="events-items" id="events-list" style="display: none;"></div>
+          <a class="btn-view-all" id="events-view-all" href="events.html" style="display: none;">Vezi toate evenimentele</a>
+        </div>
       </div>
     </section>`;
           case "members":
@@ -1126,6 +1184,83 @@ ${htmlContent}
           <button class="pagination-btn" id="members-prev-btn" onclick="changeMembersPage(-1)">← Anterior</button>
           <div class="pagination-pages" id="members-pagination-pages"></div>
           <button class="pagination-btn" id="members-next-btn" onclick="changeMembersPage(1)">Următor →</button>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer center">
+      <div class="layout-container">
+        <p>&copy; ${new Date().getFullYear()} ${settlementDisplayName}. Toate drepturile rezervate.</p>
+      </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>`;
+  };
+
+  const generateEventsPage = (faviconHref: string | null) => {
+    const settlementDisplayName =
+      (settlement?.name ?? "").trim() ||
+      (settlement?.judet ?? "").trim() ||
+      "Website";
+
+    return `<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evenimente - ${settlementDisplayName}</title>
+    ${faviconHref ? `<link rel="icon" type="image/png" href="${faviconHref}">` : ""}
+    <link rel="stylesheet" href="styles.css">
+    <style>
+      body {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+      }
+
+      .events-page {
+        flex: 1 0 auto;
+        padding: 60px 0;
+      }
+
+      .loading-message {
+        text-align: center;
+        padding: 40px 20px;
+        color: #6b7280;
+        font-size: 18px;
+      }
+    </style>
+</head>
+<body>
+    <header class="header center">
+      <div class="layout-container">
+        <h1>Evenimente - ${settlementDisplayName}</h1>
+        <nav>
+          <a href="index.html">Acasă</a>
+        </nav>
+      </div>
+    </header>
+
+    <section class="events-page">
+      <div class="layout-container">
+        <div class="events-calendar" aria-label="Calendar evenimente">
+          <div class="events-calendar-header">
+            <button class="events-nav-btn" id="events-prev-month" type="button" aria-label="Luna anterioară">←</button>
+            <div class="events-month-label" id="events-month-label"></div>
+            <button class="events-nav-btn" id="events-next-month" type="button" aria-label="Luna următoare">→</button>
+          </div>
+          <div class="events-weekdays">
+            <div>L</div><div>M</div><div>Mi</div><div>J</div><div>V</div><div>S</div><div>D</div>
+          </div>
+          <div class="events-days" id="events-days"></div>
+        </div>
+
+        <div class="events-panel">
+          <div class="loading-message" id="events-loading">Se încarcă evenimentele...</div>
+          <div class="events-selected-date" id="events-selected-date" style="display: none;"></div>
+          <div class="events-items" id="events-list" style="display: none;"></div>
         </div>
       </div>
     </section>
@@ -1465,7 +1600,7 @@ body {
 }
 
 /* Main content wrapper */
-.hero, .about, .services, .contact, .blog, .map {
+.hero, .about, .services, .contact, .blog, .map, .members, .events {
     flex: 1 0 auto;
 }
 
@@ -2086,7 +2221,233 @@ body {
         height: 36px;
         font-size: 0.85rem;
     }
-}`;
+}
+
+/* Events Section */
+.events {
+  padding: 40px 0;
+}
+
+.events h2 {
+  font-size: 32px;
+  margin-bottom: 24px;
+  color: #10b981;
+}
+
+.events-calendar {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+
+.events-calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.events-nav-btn {
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  border-radius: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.events-nav-btn:hover {
+  background: #f3f4f6;
+}
+
+.events-month-label {
+  font-weight: 800;
+  color: #111827;
+  letter-spacing: 0.02em;
+}
+
+.events-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  margin-bottom: 8px;
+  color: #6b7280;
+  font-size: 12px;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.events-weekdays > div {
+  text-align: center;
+  padding: 6px 0;
+}
+
+.events-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+
+.events-day {
+  position: relative;
+  min-height: 44px;
+  border: 1px solid #eef2f7;
+  border-radius: 12px;
+  background: #fff;
+  cursor: pointer;
+  padding: 8px 8px 10px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.events-day:hover {
+  border-color: rgba(16, 185, 129, 0.55);
+  box-shadow: 0 6px 18px rgba(16, 185, 129, 0.12);
+  transform: translateY(-1px);
+}
+
+.events-day.is-outside {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.events-day.is-today {
+  border-color: rgba(99, 102, 241, 0.55);
+  box-shadow: 0 6px 18px rgba(99, 102, 241, 0.10);
+}
+
+.events-day.is-selected {
+  border-color: #10b981;
+  box-shadow: 0 10px 26px rgba(16, 185, 129, 0.18);
+}
+
+.events-day-number {
+  font-weight: 800;
+  color: #111827;
+  font-size: 13px;
+}
+
+.events-day-dot {
+  position: absolute;
+  left: 10px;
+  bottom: 8px;
+  height: 8px;
+  width: 8px;
+  border-radius: 999px;
+  background: #10b981;
+}
+
+.events-day-count {
+  position: absolute;
+  right: 10px;
+  bottom: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #065f46;
+  background: rgba(16, 185, 129, 0.14);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.events-panel {
+  margin-top: 18px;
+}
+
+.events-selected-date {
+  font-weight: 800;
+  color: #111827;
+  margin-bottom: 10px;
+}
+
+.events-items {
+  display: grid;
+  gap: 10px;
+}
+
+.events-item {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 14px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.events-item-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: baseline;
+}
+
+.events-item-time {
+  font-weight: 800;
+  color: #111827;
+}
+
+.events-item-title {
+  font-weight: 800;
+  color: #111827;
+  margin-top: 6px;
+}
+
+.events-item-meta {
+  color: #6b7280;
+  margin-top: 6px;
+  font-size: 13px;
+}
+
+.events-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 12px;
+}
+
+.events-badge.now {
+  background: rgba(16, 185, 129, 0.12);
+  color: #047857;
+}
+
+.events-badge.future {
+  background: rgba(99, 102, 241, 0.12);
+  color: #3730a3;
+}
+
+.btn-view-all {
+  display: inline-block;
+  margin-top: 14px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: #10b981;
+  color: white;
+  text-decoration: none;
+  font-weight: 800;
+}
+
+.btn-view-all:hover {
+  filter: brightness(0.95);
+}
+
+@media (max-width: 768px) {
+  .events h2 {
+    font-size: 24px;
+  }
+
+  .events-calendar {
+    padding: 12px;
+  }
+
+  .events-day {
+    min-height: 40px;
+  }
+}
+`;
 
     // Append custom CSS if exists
     return customCSS
@@ -2098,6 +2459,7 @@ body {
   const generateJS = () => {
     const hasBlog = components.some((c) => c.type === "blog");
     const hasMembers = components.some((c) => c.type === "members");
+    const hasEvents = components.some((c) => c.type === "events");
     const hasMap = components.some((c) => c.type === "map");
     const settlementId = settlement?._id || "";
     const lat = settlement?.lat || 45.7489;
@@ -2186,6 +2548,20 @@ document.addEventListener('DOMContentLoaded', function() {
         : ""
     }
     ${
+      hasEvents
+        ? `
+    // Initialize events calendar on BOTH index.html and events.html
+    const eventsDays = document.getElementById('events-days');
+    const eventsList = document.getElementById('events-list');
+    const eventsMonthLabel = document.getElementById('events-month-label');
+
+    if (eventsDays && eventsList && eventsMonthLabel) {
+        initEventsCalendar();
+    }
+    `
+        : ""
+    }
+    ${
       hasMap
         ? `
     // Initialize map
@@ -2202,6 +2578,335 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+${
+  hasEvents
+    ? `
+// Events calendar (public events)
+let eventsCurrentYear = null;
+let eventsCurrentMonthIndex = null;
+let eventsByDate = {};
+let eventsSelectedDateStr = null;
+
+function pad2(num) {
+    return String(num).padStart(2, '0');
+}
+
+function getLocalTodayStr() {
+    const d = new Date();
+    return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+}
+
+function daysInMonth(year, monthIndex) {
+    return new Date(year, monthIndex + 1, 0).getDate();
+}
+
+function monthLabelRo(year, monthIndex) {
+    const dt = new Date(year, monthIndex, 1);
+    return dt.toLocaleDateString('ro-RO', { year: 'numeric', month: 'long' });
+}
+
+function formatDateInTimeZone(date, timeZone) {
+    try {
+        return new Intl.DateTimeFormat('en-CA', {
+            timeZone: timeZone,
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+        }).format(date);
+    } catch {
+        return getLocalTodayStr();
+    }
+}
+
+function formatTimeInTimeZone(date, timeZone) {
+    try {
+        return new Intl.DateTimeFormat('en-GB', {
+            timeZone: timeZone,
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        }).format(date);
+    } catch {
+        const d = new Date();
+        return pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+    }
+}
+
+async function fetchEventsForRange(fromDate, toDate) {
+    const url = API_URL + '/events/public?settlement=' + encodeURIComponent(SETTLEMENT_ID)
+        + (fromDate ? ('&from=' + encodeURIComponent(fromDate)) : '')
+        + (toDate ? ('&to=' + encodeURIComponent(toDate)) : '')
+        + '&limit=500';
+
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('Failed to fetch events');
+    const data = await response.json();
+    const events = (data && data.data && data.data.data) ? data.data.data : [];
+    return Array.isArray(events) ? events : [];
+}
+
+function groupEventsByDate(events) {
+    const grouped = {};
+    events.forEach(ev => {
+        const dateKey = String(ev.localDate || '');
+        if (!dateKey) return;
+        if (!grouped[dateKey]) grouped[dateKey] = [];
+        grouped[dateKey].push(ev);
+    });
+
+    Object.keys(grouped).forEach(key => {
+        grouped[key].sort((a, b) => String(a.startTime || '').localeCompare(String(b.startTime || '')));
+    });
+
+    return grouped;
+}
+
+function setEventsSelectedDate(dateStr) {
+    eventsSelectedDateStr = dateStr;
+
+    const selectedDateEl = document.getElementById('events-selected-date');
+    if (selectedDateEl) {
+        selectedDateEl.textContent = 'Evenimente: ' + dateStr;
+        selectedDateEl.style.display = 'block';
+    }
+
+    renderEventsList(dateStr);
+
+    // Update calendar selected state
+    const daysEl = document.getElementById('events-days');
+    if (daysEl) {
+        const btns = daysEl.querySelectorAll('.events-day');
+        btns.forEach(btn => {
+            if (btn.getAttribute('data-date') === dateStr) {
+                btn.classList.add('is-selected');
+            } else {
+                btn.classList.remove('is-selected');
+            }
+        });
+    }
+}
+
+function eventBadgeHtml(ev) {
+    const tz = String(ev.timeZone || 'Europe/Bucharest');
+    const now = new Date();
+    const todayTz = formatDateInTimeZone(now, tz);
+    const nowTime = formatTimeInTimeZone(now, tz);
+
+    const evDate = String(ev.localDate || '');
+    const start = String(ev.startTime || '');
+    const end = String(ev.endTime || '');
+
+    if (evDate === todayTz) {
+        if (start && end && nowTime >= start && nowTime <= end) {
+            return '<span class="events-badge now">● Acum</span>';
+        }
+        if (start && nowTime < start) {
+            return '<span class="events-badge future">→ Urmează</span>';
+        }
+    }
+
+    if (evDate && evDate > todayTz) {
+        return '<span class="events-badge future">→ Viitor</span>';
+    }
+
+    return '';
+}
+
+function renderEventsList(dateStr) {
+    const listEl = document.getElementById('events-list');
+    const loadingEl = document.getElementById('events-loading');
+
+    if (loadingEl) loadingEl.style.display = 'none';
+
+    if (!listEl) return;
+
+    const events = eventsByDate[dateStr] || [];
+
+    if (!events || events.length === 0) {
+        listEl.innerHTML = '<div style="text-align:center; color:#6b7280; padding: 16px 0;">Nu există evenimente în această zi.</div>';
+        listEl.style.display = 'block';
+        return;
+    }
+
+    listEl.innerHTML = events.map(ev => {
+        const title = escapeHtml(ev.title || '');
+        const desc = escapeHtml(ev.description || '');
+        const loc = escapeHtml(ev.location || '');
+        const linkUrl = String(ev.linkUrl || '');
+        const time = escapeHtml(String(ev.startTime || '') + ' - ' + String(ev.endTime || ''));
+        const tz = escapeHtml(String(ev.timeZone || ''));
+
+        const badge = eventBadgeHtml(ev);
+        const linkHtml = linkUrl
+            ? '<a href="' + escapeHtml(linkUrl) + '" target="_blank" rel="noreferrer" style="color:#2563eb; text-decoration:none; font-weight:700;">Detalii</a>'
+            : '';
+
+        const metaBits = [];
+        if (loc) metaBits.push('📍 ' + loc);
+        if (tz) metaBits.push('🕒 ' + tz);
+
+        return (
+            '<div class="events-item">'
+                + '<div class="events-item-top">'
+                    + '<div class="events-item-time">' + time + '</div>'
+                    + (badge ? badge : '')
+                + '</div>'
+                + '<div class="events-item-title">' + title + '</div>'
+                + (metaBits.length ? ('<div class="events-item-meta">' + metaBits.join(' • ') + '</div>') : '')
+                + (desc ? ('<div class="events-item-meta">' + desc + '</div>') : '')
+                + (linkHtml ? ('<div class="events-item-meta">' + linkHtml + '</div>') : '')
+            + '</div>'
+        );
+    }).join('');
+
+    listEl.style.display = 'block';
+}
+
+function renderEventsCalendar(year, monthIndex) {
+    const monthLabelEl = document.getElementById('events-month-label');
+    const daysEl = document.getElementById('events-days');
+    if (!daysEl) return;
+
+    if (monthLabelEl) {
+        monthLabelEl.textContent = monthLabelRo(year, monthIndex);
+    }
+
+    const todayStr = getLocalTodayStr();
+
+    // Monday-first index
+    const firstOfMonth = new Date(year, monthIndex, 1);
+    const jsDay = firstOfMonth.getDay(); // 0 Sunday
+    const mondayIndex = (jsDay + 6) % 7; // 0 Monday
+
+    const totalDays = daysInMonth(year, monthIndex);
+    const prevMonthDays = daysInMonth(year, monthIndex - 1);
+
+    const cells = [];
+    for (let i = 0; i < 42; i++) {
+        const dayOffset = i - mondayIndex;
+        const cellDate = new Date(year, monthIndex, 1 + dayOffset);
+        const cellY = cellDate.getFullYear();
+        const cellM = cellDate.getMonth() + 1;
+        const cellD = cellDate.getDate();
+        const dateStr = cellY + '-' + pad2(cellM) + '-' + pad2(cellD);
+
+        const inCurrentMonth = cellDate.getMonth() === monthIndex;
+        const isOutside = !inCurrentMonth;
+
+        const eventsForDay = eventsByDate[dateStr] || [];
+        const count = eventsForDay.length;
+
+        const classes = ['events-day'];
+        if (isOutside) classes.push('is-outside');
+        if (dateStr === todayStr) classes.push('is-today');
+        if (eventsSelectedDateStr && dateStr === eventsSelectedDateStr) classes.push('is-selected');
+
+        let dotHtml = '';
+        let countHtml = '';
+        if (count > 0) {
+            dotHtml = '<span class="events-day-dot" aria-hidden="true"></span>';
+            countHtml = '<span class="events-day-count" aria-label="' + count + ' evenimente">' + count + '</span>';
+        }
+
+        cells.push(
+            '<button type="button" class="' + classes.join(' ') + '" data-date="' + dateStr + '" ' + (isOutside ? 'disabled' : '') + '>'
+                + '<div class="events-day-number">' + cellD + '</div>'
+                + dotHtml
+                + countHtml
+            + '</button>'
+        );
+    }
+
+    daysEl.innerHTML = cells.join('');
+
+    // Bind click handlers
+    const btns = daysEl.querySelectorAll('.events-day');
+    btns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const dateStr = btn.getAttribute('data-date');
+            if (!dateStr) return;
+            setEventsSelectedDate(dateStr);
+        });
+    });
+}
+
+async function loadAndRenderEventsMonth(year, monthIndex) {
+    eventsCurrentYear = year;
+    eventsCurrentMonthIndex = monthIndex;
+
+    const loadingEl = document.getElementById('events-loading');
+    const listEl = document.getElementById('events-list');
+    const selectedDateEl = document.getElementById('events-selected-date');
+
+    if (loadingEl) loadingEl.style.display = 'block';
+    if (listEl) listEl.style.display = 'none';
+    if (selectedDateEl) selectedDateEl.style.display = 'none';
+
+    const from = year + '-' + pad2(monthIndex + 1) + '-01';
+    const to = year + '-' + pad2(monthIndex + 1) + '-' + pad2(daysInMonth(year, monthIndex));
+
+    try {
+        const events = await fetchEventsForRange(from, to);
+        eventsByDate = groupEventsByDate(events);
+
+        // Default selected date: today if inside month; otherwise first day
+        const today = getLocalTodayStr();
+        const defaultSelected = (today.substring(0, 7) === (year + '-' + pad2(monthIndex + 1))) ? today : from;
+
+        if (!eventsSelectedDateStr || eventsSelectedDateStr.substring(0, 7) !== (year + '-' + pad2(monthIndex + 1))) {
+            eventsSelectedDateStr = defaultSelected;
+        }
+
+        renderEventsCalendar(year, monthIndex);
+        setEventsSelectedDate(eventsSelectedDateStr);
+
+        const viewAllLink = document.getElementById('events-view-all');
+        if (viewAllLink) {
+            viewAllLink.style.display = 'inline-block';
+        }
+
+    } catch (error) {
+        console.error('Error loading events:', error);
+        if (loadingEl) {
+            loadingEl.textContent = 'Eroare la încărcarea evenimentelor.';
+        }
+    }
+}
+
+function initEventsCalendar() {
+    const prevBtn = document.getElementById('events-prev-month');
+    const nextBtn = document.getElementById('events-next-month');
+
+    const now = new Date();
+    const startYear = now.getFullYear();
+    const startMonth = now.getMonth();
+
+    if (prevBtn) {
+        prevBtn.addEventListener('click', function() {
+            if (eventsCurrentYear === null || eventsCurrentMonthIndex === null) return;
+            let y = eventsCurrentYear;
+            let m = eventsCurrentMonthIndex - 1;
+            if (m < 0) { m = 11; y -= 1; }
+            loadAndRenderEventsMonth(y, m);
+        });
+    }
+
+    if (nextBtn) {
+        nextBtn.addEventListener('click', function() {
+            if (eventsCurrentYear === null || eventsCurrentMonthIndex === null) return;
+            let y = eventsCurrentYear;
+            let m = eventsCurrentMonthIndex + 1;
+            if (m > 11) { m = 0; y += 1; }
+            loadAndRenderEventsMonth(y, m);
+        });
+    }
+
+    loadAndRenderEventsMonth(startYear, startMonth);
+}
+`
+    : ""
 }
 
 ${
@@ -3039,6 +3744,7 @@ function initMap() {
     const hasContact = components.some((c) => c.type === "contact");
     const hasBlog = components.some((c) => c.type === "blog");
     const hasMembers = components.some((c) => c.type === "members");
+    const hasEvents = components.some((c) => c.type === "events");
 
     switch (component.type) {
       case "header":
@@ -3051,6 +3757,7 @@ function initMap() {
         const navLabels: string[] = [];
         if (hasAbout) navLabels.push("Despre");
         if (hasMembers) navLabels.push("Membrii");
+        if (hasEvents) navLabels.push("Evenimente");
         if (hasBlog) navLabels.push("Noutăți");
         if (hasContact) navLabels.push("Contact");
 
@@ -3161,6 +3868,159 @@ function initMap() {
                 {component.content.description ||
                   "Lista serviciilor disponibile..."}
               </p>
+            </div>
+          </section>
+        );
+
+      case "events":
+        const previewEventsTitle =
+          component.content.title !== undefined
+            ? component.content.title
+            : "Evenimente";
+
+        return (
+          <section
+            className={`preview-component events ${alignmentClass}`}
+            id="evenimente"
+          >
+            <div className="layout-container">
+              {previewEventsTitle && <h2>{previewEventsTitle}</h2>}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+                  gap: "16px",
+                  marginTop: "24px",
+                }}
+              >
+                {events.length === 0 ? (
+                  <div
+                    style={{
+                      gridColumn: "1 / -1",
+                      background: "#f9fafb",
+                      padding: "40px 20px",
+                      borderRadius: "12px",
+                      textAlign: "center",
+                      border: "2px dashed #d1d5db",
+                    }}
+                  >
+                    <div style={{ fontSize: "48px", marginBottom: "12px" }}>
+                      📅
+                    </div>
+                    <p
+                      style={{
+                        fontSize: "16px",
+                        color: "#6b7280",
+                        fontWeight: "500",
+                      }}
+                    >
+                      Niciun eveniment încă
+                    </p>
+                    <p
+                      style={{
+                        fontSize: "14px",
+                        color: "#9ca3af",
+                        marginTop: "8px",
+                      }}
+                    >
+                      Creează evenimente din pagina de administrare.
+                    </p>
+                  </div>
+                ) : (
+                  events.slice(0, 5).map((ev) => (
+                    <div
+                      key={ev._id}
+                      style={{
+                        background: "white",
+                        padding: "18px",
+                        borderRadius: "12px",
+                        border: "1px solid #e5e7eb",
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          gap: "10px",
+                          flexWrap: "wrap",
+                          marginBottom: "10px",
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: "12px",
+                            color: "#10b981",
+                            fontWeight: "800",
+                            textTransform: "uppercase",
+                            letterSpacing: "0.5px",
+                          }}
+                        >
+                          {ev.localDate}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: "12px",
+                            color: "#6b7280",
+                            fontWeight: "700",
+                          }}
+                        >
+                          {ev.startTime} - {ev.endTime}
+                        </div>
+                      </div>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          gap: "10px",
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        <h4
+                          style={{
+                            margin: 0,
+                            fontSize: "16px",
+                            fontWeight: "800",
+                            color: "#111827",
+                          }}
+                        >
+                          {ev.title}
+                        </h4>
+                        <span
+                          style={{
+                            fontSize: "12px",
+                            fontWeight: "800",
+                            padding: "4px 10px",
+                            borderRadius: "999px",
+                            background:
+                              ev.status === "published"
+                                ? "rgba(16,185,129,0.12)"
+                                : "rgba(107,114,128,0.12)",
+                            color:
+                              ev.status === "published" ? "#047857" : "#374151",
+                          }}
+                        >
+                          {ev.status === "published" ? "Publicat" : "Draft"}
+                        </span>
+                      </div>
+                      {(ev.location || ev.timeZone) && (
+                        <div
+                          style={{
+                            marginTop: "10px",
+                            color: "#6b7280",
+                            fontSize: "13px",
+                          }}
+                        >
+                          {ev.location ? `📍 ${ev.location}` : ""}
+                          {ev.location && ev.timeZone ? " • " : ""}
+                          {ev.timeZone ? `🕒 ${ev.timeZone}` : ""}
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </section>
         );
@@ -3988,6 +4848,9 @@ function initMap() {
               </Link>
               <Link to={`/settlement/${id}/blog`} className="btn-blog">
                 📰 Gestionează Blog
+              </Link>
+              <Link to={`/settlement/${id}/events`} className="btn-blog">
+                📅 Gestionează Evenimente
               </Link>
               {components.length > 0 && (
                 <button

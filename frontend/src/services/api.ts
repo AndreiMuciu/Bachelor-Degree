@@ -7,9 +7,10 @@ import type {
   BlogPost,
   Member,
   Coordinate,
+  Event,
 } from "../types";
 
-const API_BASE_URL = "https://api.bachelordegree.tech/api/v1";
+const API_BASE_URL = "http://localhost:5000/api/v1";
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -269,6 +270,49 @@ export const coordinatesAPI = {
   },
 };
 
+// Event endpoints
+export const eventAPI = {
+  getBySettlement: async (settlementId: string): Promise<Event[]> => {
+    const response = await api.get<{ data: { data: Event[] } }>(
+      `/events?settlement=${settlementId}&sort=localDate,startTime`,
+    );
+    return response.data.data.data;
+  },
+
+  getPublicBySettlement: async (
+    settlementId: string,
+    params?: { from?: string; to?: string; limit?: number },
+  ): Promise<Event[]> => {
+    const response = await api.get<{ data: { data: Event[] } }>(
+      "/events/public",
+      {
+        params: {
+          settlement: settlementId,
+          ...params,
+        },
+      },
+    );
+    return response.data.data.data;
+  },
+
+  create: async (data: Partial<Event>): Promise<Event> => {
+    const response = await api.post<{ data: { data: Event } }>("/events", data);
+    return response.data.data.data;
+  },
+
+  update: async (id: string, data: Partial<Event>): Promise<Event> => {
+    const response = await api.patch<{ data: { data: Event } }>(
+      `/events/${id}`,
+      data,
+    );
+    return response.data.data.data;
+  },
+
+  delete: async (id: string): Promise<void> => {
+    await api.delete(`/events/${id}`);
+  },
+};
+
 // N8N endpoints
 export const n8nAPI = {
   createSite: async (
@@ -280,6 +324,7 @@ export const n8nAPI = {
       blogHtml?: string;
       postHtml?: string;
       membersHtml?: string;
+      eventsHtml?: string;
     },
   ): Promise<{ status: string; message: string; data: any }> => {
     const response = await api.post("/n8n/create-site", {
@@ -298,6 +343,7 @@ export const n8nAPI = {
       blogHtml?: string;
       postHtml?: string;
       membersHtml?: string;
+      eventsHtml?: string;
     },
   ): Promise<{ status: string; message: string; data: any }> => {
     const response = await api.post("/n8n/update-site", {

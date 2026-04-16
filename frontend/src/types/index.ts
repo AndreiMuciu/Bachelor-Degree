@@ -58,6 +58,24 @@ export interface Coordinate {
   settlement: string;
 }
 
+export type EventStatus = "draft" | "published";
+
+export interface Event {
+  _id: string;
+  title: string;
+  description?: string;
+  settlement: string;
+  localDate: string; // YYYY-MM-DD
+  startTime: string; // HH:mm
+  endTime: string; // HH:mm
+  timeZone: string;
+  location?: string;
+  linkUrl?: string;
+  status: EventStatus;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface WebsiteComponent {
   id: string;
   type:
@@ -69,7 +87,8 @@ export interface WebsiteComponent {
     | "footer"
     | "blog"
     | "map"
-    | "members";
+    | "members"
+    | "events";
   content: {
     title?: string;
     subtitle?: string;

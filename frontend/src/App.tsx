@@ -15,6 +15,7 @@ import HelpPage from "./pages/HelpPage";
 import FAQPage from "./pages/FAQPage";
 import BlogManagementPage from "./pages/BlogManagementPage";
 import MembersManagementPage from "./pages/MembersManagementPage";
+import EventsManagementPage from "./pages/EventsManagementPage";
 import MembersPage from "./pages/MembersPage";
 import AdminPage from "./pages/AdminPage";
 import "./App.css";
@@ -79,6 +80,16 @@ function AppRoutes() {
           <ProtectedRoute>
             <Layout>
               <MembersManagementPage />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/settlement/:settlementId/events"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <EventsManagementPage />
             </Layout>
           </ProtectedRoute>
         }

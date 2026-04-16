@@ -144,6 +144,11 @@ export const createSite = async (req, res) => {
       filesContent["members.html"] = files.membersHtml;
     }
 
+    // Add events page if provided
+    if (files.eventsHtml) {
+      filesContent["events.html"] = files.eventsHtml;
+    }
+
     const n8nPayload = {
       name: buildSiteName(settlement),
       "files-content": filesContent,
@@ -297,6 +302,12 @@ export const updateSite = async (req, res) => {
     if (files.membersHtml) {
       console.log("Members HTML included in update");
       filesContent["members.html"] = files.membersHtml;
+    }
+
+    // Add events page if provided
+    if (files.eventsHtml) {
+      console.log("Events HTML included in update");
+      filesContent["events.html"] = files.eventsHtml;
     }
 
     const n8nPayload = {
