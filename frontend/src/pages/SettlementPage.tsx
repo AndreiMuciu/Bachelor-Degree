@@ -1484,7 +1484,8 @@ ${htmlContent}
         // Backwards compatibility: older posts may already store HTML
         if (looksLikeHtml(source)) {
           if (window.DOMPurify) return DOMPurify.sanitize(source);
-          return source;
+          // If DOMPurify is missing (CDN blocked/failed), never inject raw HTML.
+          return escapeHtml(source).replace(/\n/g, '<br>');
         }
 
         // Markdown -> HTML
@@ -1497,7 +1498,8 @@ ${htmlContent}
         }
 
         if (window.DOMPurify) return DOMPurify.sanitize(html);
-        return html;
+        // Safe fallback: show plain escaped text if sanitizer isn't available.
+        return escapeHtml(source).replace(/\n/g, '<br>');
       }
       
       async function loadPost() {

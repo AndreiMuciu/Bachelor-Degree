@@ -1,12 +1,81 @@
 import BlogPost from "../models/blogPostModel.js";
-import { getOne, getAll, createOne } from "./handleFactory.js";
+import { getOne, getAll } from "./handleFactory.js";
 
 import crypto from "crypto";
+import mongoose from "mongoose";
 import { r2DeleteByPrefix, r2PutObject } from "../utils/r2.js";
 
 export const getAllBlogPosts = getAll(BlogPost);
 export const getBlogPost = getOne(BlogPost);
-export const createBlogPost = createOne(BlogPost);
+
+const isValidObjectId = (value) =>
+  mongoose.Types.ObjectId.isValid(String(value ?? ""));
+
+const userCanAccessSettlement = (user, settlementId) => {
+  if (!user) return false;
+  if (user.role === "admin") return true;
+  if (!settlementId) return false;
+  return (user.settlements || []).some(
+    (id) => id.toString() === String(settlementId),
+  );
+};
+
+const pickBlogPostPayload = (body, { allowSettlement = false } = {}) => {
+  const allowedKeys = ["title", "description", "content"];
+  if (allowSettlement) allowedKeys.push("settlement");
+
+  const payload = {};
+  for (const key of allowedKeys) {
+    if (body?.[key] !== undefined) payload[key] = body[key];
+  }
+  return payload;
+};
+
+export const createBlogPost = async (req, res) => {
+  try {
+    const settlementId = req.body?.settlement || req.body?.settlementId;
+
+    if (!settlementId) {
+      return res.status(400).json({
+        status: "fail",
+        message: "settlement is required",
+      });
+    }
+
+    if (!isValidObjectId(settlementId)) {
+      return res.status(400).json({
+        status: "fail",
+        message: "Invalid settlement ID",
+      });
+    }
+
+    if (!userCanAccessSettlement(req.user, settlementId)) {
+      return res.status(403).json({
+        status: "fail",
+        message:
+          "You do not have permission to create posts for this settlement.",
+      });
+    }
+
+    const payload = pickBlogPostPayload(req.body);
+    payload.settlement = settlementId;
+
+    const doc = await BlogPost.create(payload);
+
+    return res.status(201).json({
+      status: "success",
+      data: {
+        data: doc,
+      },
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({
+      status: "error",
+      message: err.message,
+    });
+  }
+};
 
 const R2_PUBLIC_HOST = "r2.bachelordegree.tech";
 
@@ -46,6 +115,13 @@ const cleanupUnusedPostImages = async ({ settlementId, postId, content }) => {
 
 export const updateBlogPost = async (req, res) => {
   try {
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(400).json({
+        status: "fail",
+        message: "Invalid blog post ID",
+      });
+    }
+
     const existing = await BlogPost.findById(req.params.id);
     if (!existing) {
       return res.status(404).json({
@@ -54,7 +130,22 @@ export const updateBlogPost = async (req, res) => {
       });
     }
 
-    const doc = await BlogPost.findByIdAndUpdate(req.params.id, req.body, {
+    if (!userCanAccessSettlement(req.user, existing.settlement)) {
+      return res.status(403).json({
+        status: "fail",
+        message: "You do not have permission to update this blog post.",
+      });
+    }
+
+    const allowSettlement = req.user?.role === "admin";
+    const payload = pickBlogPostPayload(req.body, {
+      allowSettlement,
+    });
+
+    // Non-admin users cannot move posts across settlements.
+    if (!allowSettlement) delete payload.settlement;
+
+    const doc = await BlogPost.findByIdAndUpdate(req.params.id, payload, {
       new: true,
       runValidators: true,
     });
@@ -90,11 +181,25 @@ export const updateBlogPost = async (req, res) => {
 
 export const deleteBlogPost = async (req, res) => {
   try {
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(400).json({
+        status: "fail",
+        message: "Invalid blog post ID",
+      });
+    }
+
     const doc = await BlogPost.findById(req.params.id);
     if (!doc) {
       return res.status(404).json({
         status: "fail",
         message: "No document found with that ID",
+      });
+    }
+
+    if (!userCanAccessSettlement(req.user, doc.settlement)) {
+      return res.status(403).json({
+        status: "fail",
+        message: "You do not have permission to delete this blog post.",
       });
     }
 
@@ -212,6 +317,36 @@ export const uploadBlogImage = async (req, res) => {
       return res.status(400).json({
         status: "fail",
         message: "settlementId and postId are required",
+      });
+    }
+
+    if (!isValidObjectId(settlementId) || !isValidObjectId(postId)) {
+      return res.status(400).json({
+        status: "fail",
+        message: "Invalid settlementId or postId",
+      });
+    }
+
+    if (!userCanAccessSettlement(req.user, settlementId)) {
+      return res.status(403).json({
+        status: "fail",
+        message:
+          "You do not have permission to upload images for this settlement.",
+      });
+    }
+
+    const post = await BlogPost.findById(postId).select("settlement");
+    if (!post) {
+      return res.status(404).json({
+        status: "fail",
+        message: "Blog post not found",
+      });
+    }
+
+    if (String(post.settlement) !== String(settlementId)) {
+      return res.status(400).json({
+        status: "fail",
+        message: "postId does not belong to settlementId",
       });
     }
 
