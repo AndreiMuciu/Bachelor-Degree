@@ -184,6 +184,27 @@ const BlogPostModal: React.FC<BlogPostModalProps> = ({
                 remarkPlugins={[remarkGfm]}
                 rehypePlugins={[rehypeSanitize]}
                 components={{
+                  ul: (props) => (
+                    <ul
+                      {...props}
+                      style={{
+                        listStyleType: "disc",
+                        paddingLeft: 20,
+                        margin: "8px 0",
+                      }}
+                    />
+                  ),
+                  ol: (props) => (
+                    <ol
+                      {...props}
+                      style={{
+                        listStyleType: "decimal",
+                        paddingLeft: 20,
+                        margin: "8px 0",
+                      }}
+                    />
+                  ),
+                  li: (props) => <li {...props} style={{ margin: "4px 0" }} />,
                   img: (props) => (
                     <img
                       {...props}
