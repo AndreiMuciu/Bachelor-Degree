@@ -3658,8 +3658,9 @@ function initMap() {
         }).setView([LOCATION.lat, LOCATION.lng], 13);
         
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors',
-            maxZoom: 19
+          attribution: '© OpenStreetMap contributors',
+          maxZoom: 19,
+          referrerPolicy: 'origin'
         }).addTo(mapInstance);
         
         // Custom icon for coordinates
@@ -4465,6 +4466,7 @@ function initMap() {
                     <TileLayer
                       attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                       url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                      referrerPolicy="origin"
                     />
                     <MapClickHandler
                       onClick={handleMapClick}
