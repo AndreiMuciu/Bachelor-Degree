@@ -1388,6 +1388,8 @@ ${htmlContent}
     <title>Postare - ${settlementDisplayName}</title>
     ${faviconHref ? `<link rel="icon" type="image/png" href="${faviconHref}">` : ""}
     <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.6/dist/purify.min.js"></script>
     <style>
       .post-page {
         padding: 40px 0;
@@ -1471,6 +1473,32 @@ ${htmlContent}
     </style>
     <script>
       const API_URL = 'https://api.bachelordegree.tech/api/v1';
+
+      function looksLikeHtml(input) {
+        return /<\\/?[a-z][\\s\\S]*>/i.test(String(input || ''));
+      }
+
+      function renderPostContent(raw) {
+        const source = String(raw || '');
+
+        // Backwards compatibility: older posts may already store HTML
+        if (looksLikeHtml(source)) {
+          if (window.DOMPurify) return DOMPurify.sanitize(source);
+          return source;
+        }
+
+        // Markdown -> HTML
+        let html = '';
+        if (window.marked && typeof marked.parse === 'function') {
+          html = marked.parse(source, { mangle: false, headerIds: false });
+        } else {
+          // Fallback: plain text with line breaks
+          html = escapeHtml(source).replace(/\\n/g, '<br>');
+        }
+
+        if (window.DOMPurify) return DOMPurify.sanitize(html);
+        return html;
+      }
       
       async function loadPost() {
         const urlParams = new URLSearchParams(window.location.search);
@@ -1497,6 +1525,8 @@ ${htmlContent}
           }
           
           document.title = (post.title || 'Post') + ' - ${settlementDisplayName}';
+
+          const rawContent = post.content || '';
           
           document.getElementById('post-container').innerHTML = \`
             <div class="post-content">
@@ -1510,9 +1540,14 @@ ${htmlContent}
                 }) : 'Dată necunoscută'}</span>
               </div>
               \${post.description ? \`<div class="post-description">\${escapeHtml(post.description)}</div>\` : ''}
-              <div class="post-body">\${post.content || 'Conținut lipsă'}</div>
+              <div class="post-body" id="post-body"></div>
             </div>
           \`;
+
+          const bodyEl = document.getElementById('post-body');
+          if (bodyEl) {
+            bodyEl.innerHTML = renderPostContent(rawContent);
+          }
         } catch (error) {
           console.error('Error loading post:', error);
           document.getElementById('post-container').innerHTML = '<p class="loading">Eroare la încărcarea postării</p>';
@@ -2612,6 +2647,23 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+// Helper to get readable plain text from Markdown/HTML
+function stripMarkdown(text) {
+  const t = String(text || '');
+  // remove fenced code blocks
+  const noCode = t.replace(/\\x60\\x60\\x60[\\s\\S]*?\\x60\\x60\\x60/g, ' ');
+  // remove images
+  const noImages = noCode.replace(/!\\[[^\\]]*\\]\\([^)]*\\)/g, ' ');
+  // links -> keep text
+  const noLinks = noImages.replace(/\\[([^\\]]+)\\]\\([^)]*\\)/g, '$1');
+  // inline code
+  const noInline = noLinks.replace(/\\x60([^\\x60]+)\\x60/g, '$1');
+  // strip any HTML tags (for older posts stored as HTML)
+  const noHtml = noInline.replace(/<[^>]*>/g, ' ');
+  // remove markdown punctuation
+  return noHtml.replace(/[>#*_~-]+/g, ' ').replace(/\\s+/g, ' ').trim();
+}
+
 ${
   hasEvents
     ? `
@@ -2983,8 +3035,8 @@ async function loadBlogPosts() {
             const escapedTitle = escapeHtml(post.title);
             const escapedDescription = escapeHtml(post.description || '');
             
-            // Strip HTML tags and truncate content
-            const strippedContent = (post.content || '').replace(/<[^>]*>/g, '');
+            // Truncate content (supports Markdown + HTML)
+            const strippedContent = stripMarkdown(post.content || '');
             const truncatedContent = strippedContent.length > 200 
                 ? escapeHtml(strippedContent.substring(0, 200)) + '...' 
                 : escapeHtml(strippedContent);
@@ -3180,8 +3232,8 @@ ${
             const escapedTitle = escapeHtml(post.title);
             const escapedDescription = escapeHtml(post.description || '');
             
-            // Strip HTML tags and truncate content
-            const strippedContent = (post.content || '').replace(/<[^>]*>/g, '');
+            // Truncate content (supports Markdown + HTML)
+            const strippedContent = stripMarkdown(post.content || '');
             const truncatedContent = strippedContent.length > 150 
                 ? escapeHtml(strippedContent.substring(0, 150)) + '...' 
                 : escapeHtml(strippedContent);

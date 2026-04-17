@@ -1,4 +1,9 @@
-import React from "react";
+import React, { useRef, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import rehypeSanitize from "rehype-sanitize";
+
+import { blogPostAPI } from "../../services/api";
 
 interface FormData {
   title: string;
@@ -12,6 +17,9 @@ interface BlogPostModalProps {
   onFormDataChange: (data: FormData) => void;
   onSubmit: (e: React.FormEvent) => void;
   onClose: () => void;
+  settlementId?: string;
+  postId?: string;
+  ensurePostId?: () => Promise<string>;
 }
 
 const BlogPostModal: React.FC<BlogPostModalProps> = ({
@@ -20,7 +28,62 @@ const BlogPostModal: React.FC<BlogPostModalProps> = ({
   onFormDataChange,
   onSubmit,
   onClose,
+  settlementId,
+  postId,
+  ensurePostId,
 }) => {
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const handlePickImage = () => {
+    setUploadError(null);
+    fileInputRef.current?.click();
+  };
+
+  const handleImageSelected: React.ChangeEventHandler<
+    HTMLInputElement
+  > = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+
+    if (!file) return;
+    if (!settlementId) {
+      setUploadError("Lipsește settlementId; nu pot încărca imaginea.");
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadError(null);
+    try {
+      const effectivePostId =
+        postId || (ensurePostId ? await ensurePostId() : undefined);
+
+      if (!effectivePostId) {
+        setUploadError(
+          "Nu am putut obține postId pentru upload (salvează postarea mai întâi).",
+        );
+        return;
+      }
+
+      const { url } = await blogPostAPI.uploadImage(file, {
+        settlementId,
+        postId: effectivePostId,
+      });
+
+      const md = `\n\n![](${url})\n`;
+      onFormDataChange({
+        ...formData,
+        content: (formData.content || "") + md,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Upload eșuat";
+      setUploadError(message);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -71,6 +134,28 @@ const BlogPostModal: React.FC<BlogPostModalProps> = ({
             <label htmlFor="content">
               Conținut <span className="required">*</span>
             </label>
+            <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={handlePickImage}
+                disabled={isUploading}
+              >
+                {isUploading ? "Se încarcă..." : "📷 Încarcă imagine"}
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                style={{ display: "none" }}
+                onChange={handleImageSelected}
+              />
+            </div>
+            {uploadError && (
+              <small style={{ color: "#ef4444", display: "block" }}>
+                {uploadError}
+              </small>
+            )}
             <textarea
               id="content"
               rows={10}
@@ -79,8 +164,37 @@ const BlogPostModal: React.FC<BlogPostModalProps> = ({
                 onFormDataChange({ ...formData, content: e.target.value })
               }
               required
-              placeholder="Scrie conținutul postării..."
+              placeholder="Scrie conținutul postării (Markdown suportat)..."
             />
+          </div>
+
+          <div className="form-group">
+            <label>Preview (Markdown)</label>
+            <div
+              style={{
+                border: "2px solid #e5e7eb",
+                borderRadius: 8,
+                padding: 12,
+                background: "#fff",
+                maxHeight: 240,
+                overflow: "auto",
+              }}
+            >
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                rehypePlugins={[rehypeSanitize]}
+                components={{
+                  img: (props) => (
+                    <img
+                      {...props}
+                      style={{ maxWidth: "100%", height: "auto" }}
+                    />
+                  ),
+                }}
+              >
+                {formData.content || ""}
+              </ReactMarkdown>
+            </div>
           </div>
 
           <div className="modal-footer">

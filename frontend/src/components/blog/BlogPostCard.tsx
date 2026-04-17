@@ -12,6 +12,22 @@ const BlogPostCard: React.FC<BlogPostCardProps> = ({
   onEdit,
   onDelete,
 }) => {
+  const contentPreview = (post.content || "")
+    // remove fenced code blocks
+    .replace(/```[\s\S]*?```/g, " ")
+    // images
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")
+    // links -> keep text
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    // inline code
+    .replace(/`([^`]+)`/g, "$1")
+    // basic markdown punctuation
+    .replace(/[>#*_~-]+/g, " ")
+    // HTML tags (if any)
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
   return (
     <div className="blog-post-card">
       <div className="post-header">
@@ -28,8 +44,8 @@ const BlogPostCard: React.FC<BlogPostCardProps> = ({
       <h3>{post.title}</h3>
       <p className="post-description">{post.description}</p>
       <div className="post-content-preview">
-        {post.content.substring(0, 150)}
-        {post.content.length > 150 && "..."}
+        {contentPreview.substring(0, 150)}
+        {contentPreview.length > 150 && "..."}
       </div>
       <div className="post-actions">
         <button className="btn-edit" onClick={() => onEdit(post)}>

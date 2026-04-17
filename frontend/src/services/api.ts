@@ -144,6 +144,26 @@ export const blogPostAPI = {
   delete: async (id: string): Promise<void> => {
     await api.delete(`/blog-posts/${id}`);
   },
+
+  uploadImage: async (
+    image: File,
+    opts: { settlementId?: string; postId?: string } = {},
+  ): Promise<{ url: string; key: string }> => {
+    const formData = new FormData();
+    formData.append("image", image);
+    if (opts.settlementId) formData.append("settlementId", opts.settlementId);
+    if (opts.postId) formData.append("postId", opts.postId);
+
+    const response = await api.post<{ data: { url: string; key: string } }>(
+      "/blog-posts/images",
+      formData,
+      {
+        headers: { "Content-Type": "multipart/form-data" },
+      },
+    );
+
+    return response.data.data;
+  },
 };
 
 // Member endpoints

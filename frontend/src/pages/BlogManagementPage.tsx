@@ -16,6 +16,7 @@ const BlogManagementPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingPost, setEditingPost] = useState<BlogPost | null>(null);
+  const [autoDraftPostId, setAutoDraftPostId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [postsPerPage] = useState(10);
@@ -35,7 +36,7 @@ const BlogManagementPage: React.FC = () => {
       const data = await blogPostAPI.getBySettlement(settlementId);
       // Sort posts by date (newest first)
       const sortedPosts = data.sort(
-        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
       );
       setPosts(sortedPosts);
     } catch (error) {
@@ -56,10 +57,48 @@ const BlogManagementPage: React.FC = () => {
         await blogPostAPI.create({ ...formData, settlement: settlementId });
       }
       await fetchPosts();
+      setAutoDraftPostId(null);
       handleCloseModal();
     } catch (error) {
       console.error("Error saving blog post:", error);
     }
+  };
+
+  const ensureDraftPostId = async (): Promise<string> => {
+    if (!settlementId) throw new Error("Missing settlementId");
+    if (editingPost?._id) return editingPost._id;
+    if (autoDraftPostId) return autoDraftPostId;
+
+    const title = formData.title.trim();
+    const description = formData.description.trim();
+
+    if (!title) throw new Error("Completează titlul înainte de upload.");
+    if (!description)
+      throw new Error("Completează descrierea înainte de upload.");
+
+    // Backend requires non-empty string for required content.
+    const content =
+      formData.content && formData.content.length > 0 ? formData.content : " ";
+
+    const created = await blogPostAPI.create({
+      title,
+      description,
+      content,
+      settlement: settlementId,
+    });
+
+    setEditingPost(created);
+    setAutoDraftPostId(created._id);
+
+    // Keep form data in sync (trimmed title/description) but don't force
+    // the textarea to show the placeholder space we used for draft creation.
+    setFormData((prev) => ({
+      ...prev,
+      title,
+      description,
+    }));
+
+    return created._id;
   };
 
   const handleDelete = async (id: string) => {
@@ -84,9 +123,22 @@ const BlogManagementPage: React.FC = () => {
   };
 
   const handleCloseModal = () => {
+    const draftIdToDelete =
+      autoDraftPostId && editingPost?._id === autoDraftPostId
+        ? autoDraftPostId
+        : null;
     setShowModal(false);
     setEditingPost(null);
+    setAutoDraftPostId(null);
     setFormData({ title: "", description: "", content: "" });
+
+    if (draftIdToDelete) {
+      // Best-effort cleanup: if user cancels after auto-draft creation,
+      // delete the draft (and its images) to avoid clutter.
+      blogPostAPI.delete(draftIdToDelete).catch((err) => {
+        console.error("Error deleting auto-draft post:", err);
+      });
+    }
   };
 
   if (loading) {
@@ -198,7 +250,7 @@ const BlogManagementPage: React.FC = () => {
                       >
                         {page}
                       </button>
-                    )
+                    ),
                   )}
                 </div>
 
@@ -216,11 +268,14 @@ const BlogManagementPage: React.FC = () => {
 
         {showModal && (
           <BlogPostModal
-            isEditing={editingPost !== null}
+            isEditing={editingPost !== null && !autoDraftPostId}
             formData={formData}
             onFormDataChange={setFormData}
             onSubmit={handleSubmit}
             onClose={handleCloseModal}
+            settlementId={settlementId}
+            postId={editingPost?._id}
+            ensurePostId={ensureDraftPostId}
           />
         )}
       </div>

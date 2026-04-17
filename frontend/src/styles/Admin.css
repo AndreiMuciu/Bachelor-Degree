@@ -365,11 +365,7 @@
   padding: 1.5rem;
   border-radius: 8px;
   min-width: 0;
-  overflow: hiddennel {
-  background: #f8f9fa;
-  padding: 1.5rem;
-  border-radius: 8px;
-  min-width: 0;
+  overflow: hidden;
 }
 
 .assignment-panel h3 {
