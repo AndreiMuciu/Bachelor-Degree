@@ -3,7 +3,10 @@ import User from "../models/userModel.js";
 import Member from "../models/memberModel.js";
 import BlogPost from "../models/blogPostModel.js";
 import Coordinates from "../models/coordinatesModel.js";
+import Event from "../models/eventModel.js";
 import { updateOne, getOne, getAll, createOne } from "./handleFactory.js";
+
+import { r2DeleteByPrefix, r2DeleteKeys } from "../utils/r2.js";
 
 import { callN8nDeleteSite, buildSiteName } from "./n8nController.js";
 
@@ -123,13 +126,39 @@ export const deleteSettlement = async (req, res) => {
       await callN8nDeleteSite({ siteName });
     }
 
-    // Cascade delete dependent data
     const settlementId = settlement._id;
+    const safeSettlementId = String(settlementId).trim();
+
+    // Best-effort cleanup of associated storage in R2.
+    // We do this before DB deletes so we can still discover member photo keys.
+    try {
+      const membersWithPhotos = await Member.find({
+        settlement: settlementId,
+        photoPath: { $exists: true, $ne: "" },
+      }).select("photoPath");
+
+      const photoKeys = (membersWithPhotos || [])
+        .map((m) => m.photoPath)
+        .filter(Boolean);
+
+      await Promise.all([
+        photoKeys.length ? r2DeleteKeys(photoKeys) : Promise.resolve(),
+        r2DeleteByPrefix(`settlements/${safeSettlementId}/blog/`),
+      ]);
+    } catch (err) {
+      console.error(
+        "[deleteSettlement] R2 cleanup failed; proceeding with DB deletion:",
+        err,
+      );
+    }
+
+    // Cascade delete dependent data
     await Promise.all([
       User.updateMany(
         { settlements: settlementId },
         { $pull: { settlements: settlementId } },
       ),
+      Event.deleteMany({ settlement: settlementId }),
       Member.deleteMany({ settlement: settlementId }),
       BlogPost.deleteMany({ settlement: settlementId }),
       Coordinates.deleteMany({ settlement: settlementId }),
